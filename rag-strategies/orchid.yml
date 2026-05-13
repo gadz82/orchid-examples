@@ -1,0 +1,58 @@
+# orchid.yml — RAG-strategies example configuration
+#
+# Pairs with ``agents.yaml`` in this directory.  The startup hook
+# seeds a small dated release-notes corpus into the
+# ``release_notes`` namespace and registers the custom
+# ``recency_simple`` strategy.
+#
+# Usage::
+#
+#   ORCHID_CONFIG=examples/rag-strategies/orchid.yml \
+#     uvicorn orchid_api.main:app --port 8000
+#
+# Or via the CLI::
+#
+#   orchid chat send "what changed in release 5.4?" \
+#     --agent recency_searcher \
+#     --config examples/rag-strategies/orchid.yml
+
+# ── Agent config ─────────────────────────────────────────────
+agents:
+  config_path: examples/rag-strategies/agents.yaml
+
+# ── LLM ──────────────────────────────────────────────────────
+llm:
+  model: gemini/gemini-flash-latest
+
+# ── Auth (demo: dev bypass) ──────────────────────────────────
+auth:
+  dev_bypass: true
+
+# ── RAG / Vector DB ──────────────────────────────────────────
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  embedding_model: gemini/gemini-embedding-001   # 3072-d
+  # In-memory backend works too — set vector_backend=null and the
+  # framework wires the in-process reader so the demo runs without
+  # Qdrant.
+
+# ── Document upload ──────────────────────────────────────────
+upload:
+  namespace: uploads
+  max_size_mb: 20
+  chunk_size: 800
+  chunk_overlap: 150
+
+# ── Chat persistence ─────────────────────────────────────────
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: /data/rag_strategies_chats.db
+
+# ── Startup hook seeds release notes + registers recency_simple ──
+startup:
+  hook: examples.rag-strategies.hooks.startup.bootstrap_rag_strategies
+
+# ── Observability ────────────────────────────────────────────
+tracing:
+  langsmith_tracing: false

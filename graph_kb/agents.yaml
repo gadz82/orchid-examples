@@ -1,0 +1,47 @@
+# agents.yaml — GraphRAG knowledge-base demo
+#
+# A single agent that retrieves through the ``graph_rag`` strategy
+# (ADR-026).  The startup hook seeds an in-memory graph with a small
+# org-chart corpus so the agent can answer questions like:
+#
+#   * "Who reports to Alice?"
+#   * "Which projects does Bob work on?"
+#
+# Hops one or two through the graph from each seed entity and fuses
+# the resulting sub-graph with the dense vector hits.
+
+version: "1"
+
+defaults:
+  llm:
+    model: "gemini/gemini-flash-latest"
+    temperature: 0.2
+  rag:
+    enabled: true
+    k: 5
+
+agents:
+  org_chart:
+    description: >
+      Answers questions about the company's reporting structure and
+      project assignments.  Uses GraphRAG so multi-hop relations
+      ("Who does Bob's manager report to?") return useful context.
+    prompt: |
+      You answer org-chart and project questions strictly from the
+      retrieved context.  When the context contains a serialised
+      graph fragment, quote the exact relation labels (e.g.
+      ``reports_to``, ``works_on``) when explaining the answer.  If
+      the question cannot be answered from the retrieved data, say
+      so plainly.
+    rag:
+      namespace: graph_kb
+      k: 5
+      retrieval:
+        strategy: graph_rag
+        # Restrict traversal to org-chart edges.  Empty list (or
+        # missing field) means "all relations".
+        graph:
+          enabled: true
+          max_hops: 2
+          fuse_with_vectors: true
+          relation_filter: [reports_to, works_on, manages]

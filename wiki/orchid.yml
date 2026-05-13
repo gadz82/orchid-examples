@@ -1,0 +1,58 @@
+# orchid.yml — Wiki RAG example configuration
+#
+# Pairs with ``agents.yaml`` in this directory.  The startup hook
+# seeds two corpora:
+#
+#   * Long-form docs (in the ``wiki_docs`` namespace) for the
+#     ``docs`` agent — ingested with the ``headered`` strategy.
+#   * FAQ snippets (in the ``wiki_faq`` namespace) for the ``faq``
+#     agent — ingested with the default ``recursive`` strategy.
+#
+# Usage::
+#
+#   ORCHID_CONFIG=examples/wiki/orchid.yml \
+#     uvicorn orchid_api.main:app --port 8000
+#
+# Or via the CLI::
+#
+#   orchid chat send "How do I configure hybrid RAG?" \
+#     --agent docs \
+#     --config examples/wiki/orchid.yml
+
+# ── Agent config ─────────────────────────────────────────────
+agents:
+  config_path: examples/wiki/agents.yaml
+
+# ── LLM ──────────────────────────────────────────────────────
+llm:
+  model: gemini/gemini-flash-latest
+
+# ── Auth (demo: dev bypass) ──────────────────────────────────
+auth:
+  dev_bypass: true
+
+# ── RAG / Vector DB ──────────────────────────────────────────
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  embedding_model: gemini/gemini-embedding-001  # 3072-d
+
+# ── Document upload ──────────────────────────────────────────
+upload:
+  namespace: uploads
+  max_size_mb: 20
+  chunk_size: 800
+  chunk_overlap: 150
+
+# ── Chat persistence ─────────────────────────────────────────
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: /data/wiki_chats.db
+
+# ── Startup hook seeds the docs + FAQ corpora ────────────────
+startup:
+  hook: examples.wiki.hooks.startup.bootstrap_wiki
+
+# ── Observability ────────────────────────────────────────────
+tracing:
+  langsmith_tracing: false

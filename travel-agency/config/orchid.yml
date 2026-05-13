@@ -1,0 +1,65 @@
+# orchid.yml — Travel Agency example
+#
+# Showcases:
+#   - Checkpointer enabled (SQLite) for HITL-required state persistence
+#   - Startup hook for seeding destination guides + registering custom tools
+#   - Dev auth bypass (demo only)
+#
+# Usage::
+#
+#   ORCHID_CONFIG=examples/travel-agency/config/orchid.yml \
+#     uvicorn orchid_api.main:app --port 8000
+#
+# Or via CLI::
+#
+#   orchid chat interactive --config examples/travel-agency/config/orchid.yml
+
+# ── Agent config ─────────────────────────────────────────────
+agents:
+  config_path: examples/travel-agency/config/agents.yaml
+
+# ── LLM ──────────────────────────────────────────────────────
+llm:
+  model: gemini/gemini-flash-latest
+  # Set GEMINI_API_KEY via env var, do NOT hardcode in YAML for production
+  # gemini_api_key: "your-key-here"
+
+# ── Auth (demo: dev bypass) ──────────────────────────────────
+auth:
+  dev_bypass: true
+
+# ── RAG / Vector DB ──────────────────────────────────────────
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  embedding_model: gemini/gemini-embedding-001   # 3072-d
+
+# ── Document upload ──────────────────────────────────────────
+upload:
+  namespace: uploads
+  max_size_mb: 20
+  chunk_size: 800
+  chunk_overlap: 150
+
+# ── Chat persistence (SQLite) ────────────────────────────────
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: /data/travel_agency_chats.db
+
+# ── Checkpointer (required for HITL tool approval) ───────────
+checkpointer:
+  type: sqlite
+  dsn: /data/travel_agency_checkpoints.db
+
+# ── MCP OAuth token storage (shared DB) ──────────────────────
+mcp_auth:
+  token_store_class: orchid_ai.persistence.mcp_token_sqlite.OrchidSQLiteMCPTokenStore
+  token_store_dsn: /data/travel_agency_chats.db
+
+# ── Startup hook (seeds destinations + registers custom tool) ──
+startup:
+  hook: examples.travel-agency.hooks.startup.bootstrap_travel
+
+# ── Tracing ──────────────────────────────────────────────────
+tracing:
+  langsmith_tracing: false

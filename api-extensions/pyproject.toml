@@ -1,0 +1,42 @@
+# Example pyproject.toml showing how to register a router plugin.
+#
+# If you package your project as ``my-consumer-project`` and ``pip install``
+# it, the entry point below will cause orchid-api's ``_load_router_plugins()``
+# to auto-register your routers at startup — no changes to orchid-api needed.
+#
+# Build & install locally to test:
+#   cd examples/api-extensions
+#   pip install -e .
+#
+# Then run orchid-api normally — your ``/admin/*`` endpoints appear:
+#   ORCHID_CONFIG=examples/api-extensions/orchid.yml uvicorn orchid_api.main:app
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "orchid-api-extensions-example"
+version = "0.1.0"
+description = "Example showing how to add custom FastAPI endpoints to orchid-api."
+requires-python = ">=3.11"
+dependencies = [
+    "orchid-ai",
+    "orchid-api",
+    "fastapi",
+    "pydantic",
+]
+
+# ── Router plugin registration ─────────────────────────────
+#
+# orchid-api's main.py discovers this group at startup and registers
+# every APIRouter it finds.  The ``name`` (left of =) is informational;
+# the value must resolve to a ``fastapi.APIRouter`` instance.
+[project.entry-points."orchid_api.routers"]
+admin = "examples.api_extensions.routers.admin:router"
+# Add more routers here — each line becomes a separate plugin.
+# analytics = "my_package.analytics:router"
+# billing = "my_package.billing:router"
+
+[tool.hatch.build.targets.wheel]
+packages = ["routers"]

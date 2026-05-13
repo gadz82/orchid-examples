@@ -1,0 +1,26 @@
+# orchid.yml — embedded-python example
+#
+# Invokes the restaurant agents without an HTTP server, entirely
+# in-process.  Point ``config_path`` at any agents.yaml you own.
+
+agents:
+  config_path: examples/restaurant/config/agents.yaml
+
+llm:
+  model: gemini/gemini-flash-latest
+
+auth:
+  dev_bypass: true
+
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  embedding_model: gemini/gemini-embedding-001
+
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: ~/.orchid/embedded_python_chats.db
+
+checkpointer:
+  type: sqlite
+  dsn: ~/.orchid/embedded_python_checkpoints.db

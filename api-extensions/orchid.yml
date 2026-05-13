@@ -1,0 +1,32 @@
+# orchid.yml — api-extensions example
+#
+# Use with either approach:
+#   (A) Import + extend:
+#       ORCHID_CONFIG=examples/api-extensions/orchid.yml \
+#           uvicorn examples.api-extensions.custom_app:app --port 8000
+#
+#   (B) Entry-point plugin (after pip install):
+#       ORCHID_CONFIG=examples/api-extensions/orchid.yml \
+#           uvicorn orchid_api.main:app --port 8000
+
+agents:
+  config_path: examples/restaurant/config/agents.yaml  # reuse restaurant for demo
+
+llm:
+  model: gemini/gemini-flash-latest
+
+auth:
+  dev_bypass: true
+
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  embedding_model: gemini/gemini-embedding-001
+
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: ~/.orchid/api_extensions_chats.db
+
+checkpointer:
+  type: sqlite
+  dsn: ~/.orchid/api_extensions_checkpoints.db

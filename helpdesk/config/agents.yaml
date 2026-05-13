@@ -1,0 +1,336 @@
+# agents.yaml — Helpdesk example configuration
+#
+# Three agents demonstrating custom classes, built-in tools, cross-agent
+# skills, agent-level skills, and sequential routing.
+#
+# Activate by pointing the config loader to this file:
+#
+#   AGENTS_CONFIG_PATH=examples/helpdesk/config/agents.yaml
+#
+# Agents:
+#   - triage     — GenericAgent (YAML-only) that classifies tickets
+#   - support    — Custom SupportAgent with agentic tool-calling loop
+#   - escalation — GenericAgent that handles escalation workflows
+
+version: "1"
+
+defaults:
+  llm:
+    model: "gemini/gemini-flash-latest"
+    temperature: 0.3
+  rag:
+    enabled: true
+    k: 5
+    retrieval:
+      query_transformers: [reformulate]  # rewrite the user query once at agent entry
+
+# ── Supervisor ────────────────────────────────────────────────────
+supervisor:
+  assistant_name: "Helpdesk AI"
+  routing_system_prompt: |
+    You are the routing brain of the Helpdesk AI system.
+    Your job is to analyze the user's message and decide which agent(s)
+    should handle it.
+
+    IMPORTANT routing rules:
+    - For new issues: ALWAYS route to triage first, then support
+    - For ticket status inquiries: route directly to support
+    - For escalation requests or critical issues: route to escalation
+    - When triage has already classified an issue, route to support next
+
+    Consider the conversation history when making routing decisions.
+
+# ── Global guardrails ────────────────────────────────────────────
+guardrails:
+  input:
+    - type: prompt_injection
+      fail_action: block
+    - type: content_safety
+      fail_action: block
+    - type: pii_detection
+      fail_action: redact
+      config:
+        entities: [credit_card, ssn]
+    - type: max_length
+      fail_action: block
+      config:
+        max_characters: 8000
+  output:
+    - type: pii_detection
+      fail_action: redact
+      config:
+        entities: [email, phone, ssn, credit_card]
+
+# ── Built-in tools ────────────────────────────────────────────────
+tools:
+  classify_ticket:
+    handler: "examples.helpdesk.tools.tickets.classify_ticket"
+    description: "Classify a support ticket by priority and category based on its description"
+    parameters:
+      description:
+        type: string
+        description: "The support ticket description text to classify"
+        required: false
+        default: ""
+  get_ticket_status:
+    handler: "examples.helpdesk.tools.tickets.get_ticket_status"
+    description: "Look up the current status and details of an existing support ticket"
+    parameters:
+      ticket_id:
+        type: string
+        description: "The ticket ID to look up (e.g. 'TK-1001')"
+        required: false
+        default: ""
+  search_kb:
+    handler: "examples.helpdesk.tools.tickets.search_kb"
+    description: "Search the knowledge base for articles relevant to a technical issue"
+    parameters:
+      query:
+        type: string
+        description: "Search query describing the technical issue"
+        required: false
+        default: ""
+
+# ── Orchestrator-level skills (cross-agent) ───────────────────────
+skills:
+  auto_resolve:
+    description: >
+      Full ticket resolution workflow: triage classifies the issue,
+      support investigates and provides a solution, then escalation
+      handles any issues that could not be resolved at the support level.
+    steps:
+      - agent: triage
+        instruction: "Classify this issue by priority and category, and determine the best routing"
+      - agent: support
+        instruction: "Based on the triage classification, search the knowledge base and provide a detailed resolution"
+      - agent: escalation
+        instruction: "Review the support agent's findings. If the issue was resolved, confirm closure. If not, create an escalation plan"
+
+# ── Agents ────────────────────────────────────────────────────────
+agents:
+  # ── Triage Agent (GenericAgent — YAML only) ─────────────────
+  triage:
+    description: >
+      Ticket triage and classification agent. Analyzes incoming support
+      requests to determine priority (critical/high/medium/low),
+      category (authentication, api, email, compliance, billing),
+      and the best agent to handle the issue. Always runs first
+      for new issues.
+
+    prompt: |
+      You are the Triage Agent for the Helpdesk AI system.
+      Your role is to quickly classify incoming support requests.
+
+      For each issue, determine:
+      1. Priority: critical, high, medium, or low
+      2. Category: authentication, api, email, compliance, billing, or general
+      3. Suggested agent: support (for most issues) or escalation (for critical/complex)
+
+      Use the classify_ticket tool to analyze the issue description.
+      Provide a brief summary of your classification with reasoning.
+
+      Be efficient — triage is the first step, not the resolution.
+      Keep your response concise and structured.
+
+    tools:
+      - classify_ticket
+
+    rag:
+      enabled: false    # Triage doesn't need RAG — it only classifies
+
+    execution_hints:
+      parallel_safe: false   # Triage should run before support (sequential)
+
+  # ── Support Agent (Custom class — agentic loop + mini-agents) ─────────────
+  #
+  # ADR-021 demo: ``mini_agent.enabled: true`` lets the support agent
+  # decompose multi-part user questions into independent sub-tasks
+  # that each get their own focused mini-agent.  Three classic
+  # examples that benefit:
+  #
+  #   "What's the status of TK-1001 and how do I reset MFA?"
+  #     → mini_0: get_ticket_status TK-1001
+  #     → mini_1: search_kb for MFA reset articles
+  #
+  #   "Triage these two tickets: <A> and <B>"
+  #     → mini_0: classify_ticket(A)
+  #     → mini_1: classify_ticket(B)
+  #
+  # The decomposer LLM call is cheap (gemini-2.5-flash-lite) and only
+  # forks when the request is truly two-or-more independent sub-tasks
+  # — single coherent questions stay on the normal single-loop path.
+  support:
+    class: examples.helpdesk.agents.support.SupportAgent
+
+    description: >
+      Technical support agent. Handles troubleshooting, diagnostics,
+      and resolution of customer issues. Can classify tickets, search
+      the knowledge base, and check ticket status. Use for any technical
+      support question or issue that needs investigation.
+
+    prompt: |
+      You are the Support Agent for the Helpdesk AI system.
+      You handle technical support queries by investigating issues,
+      searching the knowledge base, and providing clear resolutions.
+
+      Available tools:
+      - classify_ticket: Classify issues by priority and category
+      - search_kb: Search the knowledge base for relevant articles
+      - get_ticket_status: Look up existing ticket details
+
+      Always:
+      1. Classify the issue first to understand priority/category
+      2. Search the KB for relevant solutions
+      3. Provide step-by-step resolution instructions
+      4. Reference KB article IDs in your response
+      5. Recommend escalation if the issue is critical or unresolvable
+
+    tools:
+      - classify_ticket
+      - search_kb
+      - get_ticket_status
+
+    rag:
+      namespace: knowledge_base
+      k: 5
+
+    skills:
+      diagnose_and_resolve:
+        description: "Classify the issue, search KB for solutions, and provide resolution steps"
+        steps:
+          - tool: classify_ticket
+            source: builtin
+          - tool: search_kb
+            source: builtin
+
+    # Phase A — read-only built-ins benefit from parallel dispatch
+    # within a single agentic round when the LLM emits multiple
+    # tool_calls.  Composes naturally with mini-agents (each mini
+    # also benefits from this flag).
+    parallel_tools: true
+
+    # Phase B — opt into mini-agent fan-out for multi-part requests.
+    mini_agent:
+      enabled: true
+      max_count: 3
+      decomposer_model: "gemini/gemini-flash-latest"
+      timeout_seconds: 60
+      tool_allowlist_mode: strict                # decomposer MUST name real tools
+
+    execution_hints:
+      parallel_safe: false   # Runs after triage in sequential routing
+
+  # ── Escalation Agent (GenericAgent — YAML only) ─────────────
+  escalation:
+    description: >
+      Escalation management agent. Handles issues that cannot be
+      resolved at the support level, including critical outages,
+      complex multi-system problems, and SLA-sensitive requests.
+      Creates escalation plans and coordinates with engineering teams.
+
+    prompt: |
+      You are the Escalation Agent for the Helpdesk AI system.
+      You handle issues that require elevated attention or expertise.
+
+      Your responsibilities:
+      1. Review the triage classification and support investigation
+      2. Determine if escalation is truly needed
+      3. If resolved by support, confirm the resolution and recommend closure
+      4. If escalation is needed, create a structured escalation plan:
+         - Severity assessment (SEV-1 through SEV-4)
+         - Affected systems and impact scope
+         - Recommended engineering team (platform, infrastructure, security)
+         - Expected response time based on severity
+         - Interim workaround if available
+
+      Escalation severity levels:
+      - SEV-1: Complete service outage, data loss, security breach (response: 15 min)
+      - SEV-2: Major feature broken, significant user impact (response: 1 hour)
+      - SEV-3: Degraded performance, workaround available (response: 4 hours)
+      - SEV-4: Minor issue, cosmetic, low impact (response: 24 hours)
+
+      Be decisive and clear. Avoid unnecessary escalations — most issues
+      should be resolved at the support level.
+
+    tools:
+      - get_ticket_status
+      - classify_ticket
+
+    rag:
+      enabled: false    # Escalation uses context from previous agents
+
+    execution_hints:
+      parallel_safe: true
+
+# ── Pollen + Bloom (events) ──────────────────────────────────
+# High-priority ticket triage — an act_as_user Bloom that fires when
+# an external ticketing system POSTs to /signals.  Demonstrates:
+#
+#   * HTTPIngestionProducer + HMAC-SHA256 validation.
+#   * act_as_user identity flavour with a working mint_for_user.
+#   * JMESPath when: filter so only payload.priority == 'high' fires.
+#   * §26 default visibility = 'actor' — the run is visible to the
+#     ticket reporter only (and admins).
+#
+# Storage / queue use Postgres (the helpdesk example is the production-
+# shape demo; the basketball example covers the SQLite path).  The
+# secret is read from env:HELPDESK_TICKETING_HMAC_SECRET so deployments
+# don't bake it into YAML.
+events:
+  enabled: true
+
+  store:
+    class: orchid_ai.events.backends.postgres.PostgresEventStorage
+    extra_args:
+      dsn: ${HELPDESK_DATABASE_URL}
+
+  queue:
+    class: orchid_ai.events.queues.postgres.PostgresSignalQueue
+    notify_enabled: true
+    poll_interval_ms: 200
+    lease_seconds: 300   # 5 min — covers the full triage→support→escalation pipeline
+    max_attempts: 3
+
+  scheduler:
+    class: orchid_ai.events.schedulers.apscheduler.APSchedulerBackend
+
+  # HTTPIngestionProducer is mounted automatically by orchid-api when
+  # events.ingestion.sources is non-empty — no entry needed here.
+  producers: []
+
+  processors:
+    - class: orchid_ai.events.processors.asyncio_pool.AsyncioWorkerPoolProcessor
+      concurrency: 4
+      lease_seconds: 300   # must match queue — this is what dequeue() uses
+
+  ingestion:
+    sources:
+      - id: ticketing-system
+        validator:
+          class: orchid_ai.events.auth.HMACValidator
+          secret_ref: env:HELPDESK_TICKETING_HMAC_SECRET
+        allowed_types:
+          - support.ticket.created
+          - support.ticket.updated
+
+  triggers:
+    - id: high-priority-ticket
+      "on":
+        signal: support.ticket.created
+        when: "payload.priority == 'high'"
+      emits:
+        agent: support
+        prompt_template: |
+          A high-priority ticket has been opened by user {{user_id}}.
+
+          Subject: {{payload.subject}}
+          Summary: {{payload.summary}}
+
+          Investigate using the available tools.  Produce a recommended
+          response with up to 3 next steps, each citing the data source.
+        identity: { mode: act_as_user, user_id_from: signal.user_id }
+        proactive_chat: true   # runner creates a new chat for the user and posts the result there
+        # §26 visibility omitted → default 'actor' → only the ticket
+        # reporter (and admins) can see this run via /runs.
+      retry: { max: 2, backoff: exponential }
+      parallelism: per_user

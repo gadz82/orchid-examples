@@ -1,0 +1,43 @@
+# orchid.yml — Custom-storage example configuration
+#
+# Wires a custom JSON-file ``OrchidChatStorage`` backend through the
+# ``storage.class`` field.  Any class path resolvable via Python's
+# import machinery works — see ``storage/json_file.py`` in this
+# directory for the concrete implementation.
+#
+# Usage::
+#
+#   ORCHID_CONFIG=examples/custom-storage/orchid.yml \
+#     uvicorn orchid_api.main:app --port 8000
+#
+# Or via the CLI::
+#
+#   orchid chat send "hello" --config examples/custom-storage/orchid.yml
+
+# ── Agent config ─────────────────────────────────────────────
+agents:
+  config_path: examples/custom-storage/agents.yaml
+
+# ── LLM ──────────────────────────────────────────────────────
+llm:
+  model: ollama/llama3.2
+  ollama_api_base: http://host.docker.internal:11434
+
+# ── Auth (demo: dev bypass) ──────────────────────────────────
+auth:
+  dev_bypass: true
+
+# ── Chat persistence — CUSTOM JSON-FILE BACKEND ──────────────
+#
+# The ``class`` field accepts any dotted import path that resolves to
+# an ``OrchidChatStorage`` subclass.  The factory passes ``dsn=`` and
+# ``extra_migrations_package=`` to the constructor — both kwargs are
+# part of the ABC contract even when (as here) the implementation
+# ignores migrations.
+storage:
+  class: examples.custom-storage.storage.json_file.OrchidJSONChatStorage
+  dsn: /data/custom_storage_chats.json
+
+# ── Observability ────────────────────────────────────────────
+tracing:
+  langsmith_tracing: false

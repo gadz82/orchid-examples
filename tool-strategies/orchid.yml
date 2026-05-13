@@ -1,0 +1,38 @@
+# orchid.yml — Tool-strategies example configuration
+#
+# Pairs with ``agents.yaml`` in this directory.  Spinning up the demo
+# requires an MCP server reachable at ${KB_MCP_URL} that exposes
+# ``cache_lookup``, ``primary_lookup``, and ``slow_lookup`` tools.
+# Any reasonable mock works — see the README for a tiny standalone
+# server snippet.
+#
+# Usage::
+#
+#   KB_MCP_URL=http://localhost:9001/mcp \
+#     ORCHID_CONFIG=examples/tool-strategies/orchid.yml \
+#     uvicorn orchid_api.main:app --port 8000
+
+# ── Agent config ─────────────────────────────────────────────
+agents:
+  config_path: examples/tool-strategies/agents.yaml
+
+# ── LLM ──────────────────────────────────────────────────────
+llm:
+  model: gemini/gemini-flash-latest
+
+# ── Auth (demo: dev bypass) ──────────────────────────────────
+auth:
+  dev_bypass: true
+
+# ── Chat persistence (built-in SQLite) ───────────────────────
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: /data/tool_strategies_chats.db
+
+# ── Startup hook registers the custom ``priority`` strategy ──
+startup:
+  hook: examples.tool-strategies.hooks.startup.bootstrap_strategies
+
+# ── Observability ────────────────────────────────────────────
+tracing:
+  langsmith_tracing: false

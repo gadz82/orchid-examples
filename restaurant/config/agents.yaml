@@ -1,0 +1,395 @@
+# agents.yaml — Restaurant example configuration
+#
+# Three agents demonstrating RAG, dynamic injection, sequential routing,
+# built-in tools, custom agent classes, and multi-agent skills.
+#
+# Activate by pointing the config loader to this file:
+#
+#   AGENTS_CONFIG_PATH=examples/restaurant/config/agents.yaml
+#
+# Agents:
+#   - menu     — GenericAgent (YAML-only): menu queries, dietary filtering, recommendations
+#   - orders   — GenericAgent: order placement, modifications, status checks
+#   - reviews  — Custom ReviewsAgent: review analysis and sentiment
+
+version: "1"
+
+defaults:
+  llm:
+    model: "gemini/gemini-flash-latest"
+    temperature: 0.3
+  rag:
+    enabled: false
+    retrieval:
+      strategy: multi_query           # generate query variations for broader recall
+      query_transformers: [reformulate]  # rewrite the user query once at agent entry
+
+# ── Supervisor ────────────────────────────────────────────────
+supervisor:
+  assistant_name: "Restaurant AI"
+  system_prompt: |
+    You are Restaurant AI, an intelligent dining assistant.
+    You coordinate between menu experts, order management, and review analysis
+    to provide a seamless dining experience.
+
+    Route questions about the menu, ingredients, dietary needs, or recommendations
+    to the menu agent. Route order placement, modifications, and status checks
+    to the orders agent. Route review analysis, feedback, and satisfaction
+    questions to the reviews agent.
+
+# ── Global guardrails ────────────────────────────────────────
+guardrails:
+  input:
+    - type: prompt_injection
+      fail_action: block
+    - type: content_safety
+      fail_action: block
+    - type: max_length
+      fail_action: block
+      config:
+        max_characters: 5000
+  output:
+    - type: pii_detection
+      fail_action: redact
+      config:
+        entities: [email, phone, credit_card]
+
+# ── Built-in tools ────────────────────────────────────────────
+tools:
+  search_menu:
+    handler: "examples.restaurant.tools.menu.search_menu"
+    description: "Search the restaurant menu by keyword and dietary preference (vegetarian, vegan, gluten-free, etc.)"
+    parameters:
+      query:
+        type: string
+        description: "Keyword to search for in menu items (e.g. 'pasta', 'salmon', 'dessert')"
+        required: false
+        default: ""
+      dietary_filter:
+        type: string
+        description: "Dietary preference filter: vegetarian, vegan, gluten-free, dairy-free, or high-protein"
+        required: false
+        default: ""
+  get_daily_specials:
+    handler: "examples.restaurant.tools.menu.get_daily_specials"
+    description: "Get today's daily specials with prices and availability"
+  place_order:
+    handler: "examples.restaurant.tools.orders.place_order"
+    description: "Place a new order with comma-separated item names and optional table number"
+    parameters:
+      items:
+        type: string
+        description: "Comma-separated list of menu item names to order"
+        required: false
+        default: ""
+      table_number:
+        type: int
+        description: "Table number for dine-in (0 for takeout)"
+        required: false
+        default: 0
+  get_order_status:
+    handler: "examples.restaurant.tools.orders.get_order_status"
+    description: "Check the current status and details of an existing order by order ID"
+    parameters:
+      order_id:
+        type: string
+        description: "The order ID to look up (e.g. 'ORD-1001')"
+        required: false
+        default: ""
+  calculate_bill:
+    handler: "examples.restaurant.tools.orders.calculate_bill"
+    description: "Calculate the itemized bill for an order including tax and service charge"
+    parameters:
+      order_id:
+        type: string
+        description: "The order ID to calculate the bill for"
+        required: false
+        default: ""
+  analyze_sentiment:
+    handler: "examples.restaurant.tools.reviews.analyze_sentiment"
+    description: "Analyze the sentiment of a customer review text (score, keywords, star rating)"
+    parameters:
+      text:
+        type: string
+        description: "Customer review text to analyze for sentiment"
+        required: false
+        default: ""
+
+# ── Orchestrator-level skills (cross-agent) ───────────────────
+skills:
+  full_dining_experience:
+    description: >
+      Complete dining workflow: browse the menu for recommendations,
+      place an order, and then collect a review with sentiment analysis.
+    steps:
+      - agent: menu
+        instruction: "Search the menu for items matching the customer's preferences and provide recommendations"
+      - agent: orders
+        instruction: "Place an order for the recommended items at the customer's table"
+      - agent: reviews
+        instruction: "Ask for and analyze the customer's review of their dining experience"
+
+  menu_and_order:
+    description: >
+      Browse the menu and place an order in sequence. The orders agent
+      validates items against the menu before confirming.
+    steps:
+      - agent: menu
+        instruction: "Find menu items matching the customer's request and list them with prices"
+      - agent: orders
+        instruction: "Place an order for the items the customer selected from the menu results"
+
+# ── Agents ────────────────────────────────────────────────────
+
+agents:
+  # ── Menu Expert ──────────────────────────────────────────────
+  menu:
+    description: >
+      Restaurant menu expert. Handles menu queries, dietary filtering,
+      ingredient questions, allergen warnings, and dish recommendations.
+      Use for any question about what the restaurant serves.
+
+    prompt: |
+      You are a Menu Expert AI assistant for an upscale restaurant.
+      You have access to the full menu via built-in tools and RAG context.
+
+      CRITICAL GROUNDING RULES:
+      - ONLY suggest, recommend, or mention menu items that appear in your
+        tool results or RAG context. NEVER invent, fabricate, or guess
+        menu items, prices, or ingredients.
+      - If the customer asks for something not found in the data, say
+        "I don't see that on our current menu" and suggest alternatives
+        that DO exist in the retrieved data.
+      - When listing options (e.g. vegetarian dishes), include ONLY items
+        confirmed by your tools or RAG context — not general knowledge.
+
+      Given the user's question, use your tools to find relevant menu items
+      and provide helpful, appetizing recommendations.
+
+      Focus on:
+      - Accurate menu item details (price, ingredients, allergens)
+      - Dietary accommodations (vegetarian, vegan, gluten-free, dairy-free)
+      - Personalized recommendations based on preferences
+      - Daily specials and seasonal highlights
+      - Allergen warnings when relevant
+
+      Be warm, knowledgeable, and enthusiastic about the food.
+
+    tools:
+      - search_menu
+      - get_daily_specials
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [menu, food, dish, ingredient, allergen, dietary, vegetarian, vegan, gluten, price, special, appetizer, entree, dessert, drink, wine, cocktail]
+      output:
+        - type: groundedness
+          fail_action: warn
+          config:
+            min_overlap: 0.25
+
+    rag:
+      namespace: menu
+      k: 10
+      retrieval:
+        strategy: multi_query
+        query_transformers: [reformulate]
+
+    skills:
+      dietary_recommendation:
+        description: "Search the menu with a dietary filter, then show today's specials that also match"
+        steps:
+          - tool: search_menu
+            source: builtin
+          - tool: get_daily_specials
+            source: builtin
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Order Manager ────────────────────────────────────────────
+  orders:
+    description: >
+      Order management agent. Handles order placement, modifications,
+      status checks, and bill calculations. Use for anything related
+      to placing or tracking an order.
+
+    prompt: |
+      You are an Order Management AI assistant for the restaurant.
+      You handle order placement, status tracking, and bill calculation.
+
+      CRITICAL GROUNDING RULES:
+      - Only place orders for items that exist in the menu system.
+        If the place_order tool returns an error or indicates an item
+        is unavailable, inform the customer honestly and suggest
+        alternatives from previous tool results or context.
+      - NEVER confirm an order for items you haven't verified via tools.
+      - When suggesting alternatives, only use items you have seen in
+        tool results or context from the menu agent.
+
+      Given the user's request, use your tools to manage their order.
+
+      Focus on:
+      - Accurate order placement with correct item names
+      - Clear order confirmations with totals and estimated times
+      - Helpful status updates for existing orders
+      - Itemized bill calculation with tax and service charge
+
+      Be efficient, accurate, and confirm details before finalizing orders.
+
+    tools:
+      - place_order
+      - get_order_status
+      - calculate_bill
+
+    rag:
+      enabled: false
+
+    skills:
+      order_and_bill:
+        description: "Place an order and then immediately calculate the bill"
+        steps:
+          - tool: place_order
+            source: builtin
+          - tool: calculate_bill
+            source: builtin
+
+    execution_hints:
+      parallel_safe: false
+      depends_on:
+        - menu
+
+  # ── Review Analyst (custom agent class) ──────────────────────
+  reviews:
+    class: examples.restaurant.agents.reviews.ReviewsAgent
+    description: >
+      Customer review analyst. Performs sentiment analysis on reviews,
+      identifies trends, and provides actionable feedback insights.
+      Use for review analysis, feedback summaries, and satisfaction metrics.
+
+    prompt: >
+      You are a restaurant review analyst. Your role is to analyze customer
+      reviews, perform sentiment analysis, identify recurring themes and trends,
+      and provide actionable feedback insights to help improve the dining
+      experience. When presenting results, include sentiment scores, key
+      highlights, and specific recommendations. Be objective and data-driven
+      in your analysis.
+
+    tools:
+      - analyze_sentiment
+
+    rag:
+      namespace: reviews
+      k: 10
+
+    execution_hints:
+      parallel_safe: true
+
+# ── MCP gateway exposure (optional) ──────────────────────────
+#
+# How the orchid-mcp gateway presents Orchid to MCP-capable hosts
+# (Claude Desktop, Claude Code, Cursor, MCP Inspector).  Tool
+# title/description overrides replace the gateway's built-in defaults
+# so the host LLM sees integrator-branded context.  Prompts are
+# discoverable pre-canned templates with {{var}} substitution.
+#
+# Removing this block is safe — the gateway falls back to defaults.
+mcp_gateway:
+  tools:
+    orchid_ask:
+      title: "Ask the Restaurant AI"
+      description: >
+        Ask the restaurant multi-agent assistant about menus, dietary
+        filtering, order placement, modifications, reviews, sentiment, or
+        recommendations. The supervisor routes to the right specialist.
+    orchid_new_chat:
+      title: "Start a new dining session"
+      description: "Begin a fresh restaurant-AI conversation (e.g. a new table / new customer)."
+    orchid_upload_file:
+      description: "Attach a menu PDF, supplier sheet, or review export to the current session for RAG."
+
+  prompts:
+    - name: dietary_filter
+      title: "Filter menu by dietary constraint"
+      description: "Ask the menu agent for items matching a dietary constraint."
+      arguments:
+        - { name: constraint, description: "e.g. gluten-free, vegan, dairy-free", required: true }
+      template: |
+        Using the menu agent, list all menu items that are {{constraint}}.
+        Group by course (starters, mains, desserts) and include key ingredients.
+
+    - name: wine_pairing
+      title: "Suggest a wine pairing"
+      description: "Ask the menu agent to suggest a wine for a given dish or cuisine."
+      arguments:
+        - { name: dish, description: "Dish or cuisine to pair with", required: true }
+      template: |
+        Using the menu agent, suggest a wine pairing for {{dish}}.
+        Explain the pairing rationale in one short paragraph.
+
+    - name: review_summary
+      title: "Summarise recent reviews"
+      description: "Ask the reviews agent for a sentiment-weighted summary."
+      arguments:
+        - { name: window, description: "Time window (e.g. 'last 7 days', 'this month')", required: false }
+      template: |
+        Using the reviews agent, summarise customer feedback from {{window}}.
+        Include overall sentiment, recurring themes, and two actionable
+        improvements the kitchen should consider.
+
+# ── Pollen + Bloom (events) ──────────────────────────────────
+# The flagship UX: a chat-time concierge agent emits a signal that
+# triggers a heavy-weight ``research`` Bloom in the background.  The
+# Bloom's final ``AIMessage`` lands back in the same chat with
+# ``metadata.origin="bloom"`` (§25 chat binding).  Demonstrates:
+#
+#   * ``OrchidAgent.emit_signal(chat_id="self")`` from an agent's run.
+#   * ``respect_chat_binding: true`` opt-in on the trigger.
+#   * Pre-flight authorisation (§25.4) — cross-user smuggling
+#     attempts are rejected at runtime, not just at YAML load.
+#   * §26 default visibility ``actor`` plus chat ACL on the bound
+#     message.
+events:
+  enabled: true
+
+  store:
+    class: orchid_ai.events.backends.sqlite.SQLiteEventStorage
+    extra_args:
+      dsn: /data/chats.db
+
+  queue:
+    class: orchid_ai.events.queues.sqlite.SQLiteSignalQueue
+    poll_interval_ms: 200
+    lease_seconds: 60
+    max_attempts: 2
+
+  scheduler:
+    class: orchid_ai.events.schedulers.apscheduler.APSchedulerBackend
+
+  producers:
+    - class: orchid_ai.events.producers.internal.InternalEmissionProducer
+
+  processors:
+    - class: orchid_ai.events.processors.asyncio_pool.AsyncioWorkerPoolProcessor
+      concurrency: 2
+
+  triggers:
+    - id: deep-research
+      "on":
+        signal: research.requested
+      emits:
+        agent: reviews   # the existing example agent stands in for "research"
+        prompt_template: |
+          Plan a deep-research answer for: {{payload.question}}
+
+          Use the full toolchain.  Format as Markdown.
+        identity: { mode: act_as_user, user_id_from: signal.user_id }
+        respect_chat_binding: true
+        # §26 visibility omitted → default 'actor' → run row visible
+        # only to the originating user (and admins).  The bound chat
+        # message is governed separately by chat ACLs (§25).
+      retry: { max: 1, backoff: exponential }
+      parallelism: per_user

@@ -1,0 +1,111 @@
+# agents.yaml — Learning example configuration
+#
+# Demonstrates the Pollen + Bloom fan-out pattern: a single weekly
+# cron tick emits one signal per active learner, and each signal
+# triggers a Bloom that runs as that specific learner under the
+# ``addressed_to_user`` identity flavour.
+#
+# Activate by pointing the config loader to this file:
+#
+#   AGENTS_CONFIG_PATH=examples/learning/agents.yaml
+
+version: "1"
+
+defaults:
+  llm:
+    model: "ollama/llama3.2"
+    temperature: 0.2
+  rag:
+    enabled: false
+
+# ── Built-in tools ───────────────────────────────────────────
+# Empty for the example — the digest agent uses its prompt only.
+tools: {}
+
+# ── Agents ───────────────────────────────────────────────────
+agents:
+  digest:
+    description: >
+      Personalised weekly learning digest.  Receives a learner id
+      and a week number, produces a Markdown summary of what they
+      should focus on next.
+    prompt: |
+      You are the Weekly Learning Digest agent.  Build a short
+      personalised digest for the named learner.  Format as
+      Markdown with these sections:
+
+      - Highlights from last week
+      - Recommended next steps
+      - One stretch goal
+
+      Keep it to under 150 words.
+
+    rag:
+      enabled: false
+
+    execution_hints:
+      parallel_safe: true
+
+# ── Pollen + Bloom (events) ──────────────────────────────────
+# Weekly fan-out — every Monday at 06:00 UTC the custom
+# WeeklyDigestFanoutProducer enumerates active learners and emits
+# one ``weekly-digest.due`` signal per (tenant, user).  Each signal
+# triggers a Bloom under ``addressed_to_user`` identity.
+#
+# Demonstrates:
+#
+#   * Custom ``OrchidSignalProducer`` (the integrator-extensible
+#     pattern, but built into the example for didactic clarity).
+#   * ``addressed_to_user`` identity flavour: service account acts
+#     on a user's RAG scope without being the user.
+#   * One trigger, N parallel runs (one per user) under
+#     ``parallelism: per_user``.
+#   * §26 default visibility = ``addressed`` — each user only sees
+#     their own digest, never another user's.
+events:
+  enabled: true
+
+  store:
+    class: orchid_ai.events.backends.sqlite.SQLiteEventStorage
+    extra_args:
+      dsn: /data/chats.db
+
+  queue:
+    class: orchid_ai.events.queues.sqlite.SQLiteSignalQueue
+    poll_interval_ms: 200
+    lease_seconds: 30
+    max_attempts: 2
+
+  scheduler:
+    class: orchid_ai.events.schedulers.apscheduler.APSchedulerBackend
+
+  # Producers wire the YAML at boot.  In tests we construct the
+  # producer directly so we can drive a single cron tick.
+  producers:
+    - class: examples.learning.producers.weekly_digest.WeeklyDigestFanoutProducer
+      extra_args:
+        cron: "0 6 * * 1"
+    - class: orchid_ai.events.producers.internal.InternalEmissionProducer
+
+  processors:
+    - class: orchid_ai.events.processors.asyncio_pool.AsyncioWorkerPoolProcessor
+      concurrency: 4
+
+  triggers:
+    - id: weekly-digest
+      "on": { signal: weekly-digest.due }
+      emits:
+        agent: digest
+        prompt_template: |
+          Build a personalised weekly learning digest for user
+          {{user_id}} in tenant {{tenant_key}}, week
+          {{payload.week_iso}}.  Format: Markdown.
+        identity:
+          mode: addressed_to_user
+          service_account: digest-bot
+          user_id_from: signal.user_id
+        # §26 default 'addressed' — each user only sees their own
+        # digest, never another user's, even though all are spawned
+        # by the same service-account fan-out.
+      retry: { max: 2, backoff: exponential }
+      parallelism: per_user

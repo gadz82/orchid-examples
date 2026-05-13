@@ -1,0 +1,51 @@
+# orchid.yml — Restaurant example configuration
+#
+# Self-contained demo: menu + orders + reviews agents with SQLite storage.
+# Demonstrates RAG with dynamic injection, sequential routing, and custom agents.
+# No external APIs or accounts required — only Ollama + Qdrant.
+#
+# Usage:
+#   ORCHID_CONFIG=examples/restaurant/config/orchid.yml uvicorn orchid_api.main:app
+#
+# Or via docker-compose:
+#   docker compose -f docker-compose.demo.yml up --build
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  config_path: examples/restaurant/config/agents.yaml
+
+# ── LLM ───────────────────────────────────────────────────────
+llm:
+  #model: ollama/llama3.2
+  #ollama_api_base: http://host.docker.internal:11434
+  model: gemini/gemini-flash-latest
+  gemini_api_key: ${GEMINI_API_KEY}
+
+# ── Auth ──────────────────────────────────────────────────────
+auth:
+  dev_bypass: true
+
+# ── RAG / Vector DB ──────────────────────────────────────────
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  #embedding_model: ollama/nomic-embed-text
+  embedding_model: gemini/gemini-embedding-001  # 3072-d
+  gemini_api_key: ${GEMINI_API_KEY}
+
+# ── Document upload ───────────────────────────────────────────
+upload:
+  vision_model: ollama/minicpm-v
+  namespace: uploads
+  max_size_mb: 20
+  chunk_size: 1000
+  chunk_overlap: 200
+
+# ── Chat persistence ─────────────────────────────────────────
+storage:
+  class: examples.basketball.storage.sqlite.OrchidSQLiteChatStorage
+  dsn: /data/restaurant_chats.db
+
+# ── Observability ─────────────────────────────────────────────
+tracing:
+  langsmith_tracing: false
