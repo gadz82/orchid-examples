@@ -1,0 +1,50 @@
+# orchid.yml — Recipes example (zero-infrastructure RAG with ChromaDB)
+#
+# Uses ChromaDB for local, on-disk vector storage — no Docker, no Qdrant
+# required.  The startup hook seeds a small recipe corpus into the
+# ``recipes`` namespace.
+#
+# Usage with the CLI::
+#
+#   pip install -e ../orchid -e ../orchid-cli
+#   orchid chat send "What can I make with chicken and rice?" \
+#     --config examples/recipes/orchid.yml
+#
+# Or start an interactive session::
+#
+#   orchid chat interactive --config examples/recipes/orchid.yml
+
+# ── Agent config ──────────────────────────────────────────────
+agents:
+  config_path: examples/recipes/agents.yaml
+
+# ── LLM ───────────────────────────────────────────────────────
+llm:
+  model: ollama/llama3.2
+
+# ── Auth (demo: dev bypass) ───────────────────────────────────
+auth:
+  dev_bypass: true
+
+# ── RAG / Vector DB — ChromaDB (zero infra) ───────────────────
+rag:
+  vector_backend: chroma      # on-disk, no Docker needed
+  embedding_model: ollama/nomic-embed-text   # 768-d, runs locally
+
+# ── Document upload ───────────────────────────────────────────
+upload:
+  namespace: uploads
+  max_size_mb: 20
+
+# ── Chat persistence ──────────────────────────────────────────
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: ~/.orchid/recipes.db
+
+# ── Startup hook seeds the recipe corpus ──────────────────────
+startup:
+  hook: examples.recipes.hooks.startup.seed_recipes
+
+# ── Observability ─────────────────────────────────────────────
+tracing:
+  langsmith_tracing: false

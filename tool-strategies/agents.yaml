@@ -1,0 +1,186 @@
+# agents.yaml — Tool-strategies showcase
+#
+# Demonstrates how the per-MCP-server ``tool_call_strategy`` field
+# controls Orchid's :class:`OrchidToolCallStrategy` dispatch.  Each of
+# the four agents hits the same fictional knowledge-base MCP server
+# but selects a different strategy:
+#
+#   * "all"          — every whitelisted tool runs concurrently.
+#   * "sequential"   — tools run in declared order, each receiving the
+#                       previous results as ``previous_results``.
+#   * "llm_decides"  — the LLM picks which tools to call.
+#   * "priority"     — custom strategy registered by ``hooks/startup.py``.
+#                       Calls tools in declared order, stops at first
+#                       non-empty result.  Mirrors a "cache → DB →
+#                       upstream" lookup chain.
+#
+# IMPORTANT: ``tool_call_strategy`` is consulted by skill-execution
+# paths only.  The default agentic-loop (the LLM picking tools via
+# native ``tool_calls``) does NOT honour it — see the strategy module's
+# header note.  Each agent below therefore declares an explicit skill
+# that surfaces the strategy in action.
+#
+# A fifth agent (``parallel_searcher``) showcases the orthogonal
+# ``parallel_tools`` flag, which controls intra-round parallel
+# dispatch in the agentic loop (Phase A).
+#
+# The MCP server URL is read from ``${KB_MCP_URL}``.  Point it at any
+# server that exposes ``cache_lookup``, ``primary_lookup``, and
+# ``slow_lookup`` tools (any reasonable mock works for the demo).
+
+version: "1"
+
+defaults:
+  llm:
+    model: "gemini/gemini-flash-latest"
+    temperature: 0.2
+  rag:
+    enabled: false  # Strategy demo is about tool dispatch, not retrieval.
+
+# ── Built-in tools (used by the parallel_tools demo) ───────────
+tools:
+  metric_a:
+    handler: "examples.tool-strategies.tools.metrics.metric_a"
+    description: "Read-only fast metric A.  Safe for parallel dispatch."
+    parallel_safe: true
+  metric_b:
+    handler: "examples.tool-strategies.tools.metrics.metric_b"
+    description: "Read-only fast metric B.  Safe for parallel dispatch."
+    parallel_safe: true
+  metric_c:
+    handler: "examples.tool-strategies.tools.metrics.metric_c"
+    description: "Read-only fast metric C.  Safe for parallel dispatch."
+    parallel_safe: true
+
+# ── Agents ─────────────────────────────────────────────────────
+agents:
+  # ── 1. Strategy: all (concurrent fan-out) ──────────────────
+  fanout_lookup:
+    description: >
+      Looks up an entity across every backend in parallel and merges
+      results.  Use when the backends are independent and slowest
+      common path is acceptable.
+    prompt: |
+      You aggregate the answers from every backend lookup tool and
+      report the union of their results.
+    mcp_servers:
+      - name: knowledge_base
+        url: ${KB_MCP_URL}
+        tool_call_strategy: all
+        tools:
+          - { name: cache_lookup }
+          - { name: primary_lookup }
+          - { name: slow_lookup }
+    skills:
+      lookup_everywhere:
+        description: "Fan out to every backend in parallel."
+        steps:
+          - { tool: cache_lookup, source: mcp, server: knowledge_base }
+          - { tool: primary_lookup, source: mcp, server: knowledge_base }
+          - { tool: slow_lookup, source: mcp, server: knowledge_base }
+
+  # ── 2. Strategy: sequential (chained context) ──────────────
+  pipeline_lookup:
+    description: >
+      Runs tools in order, threading each tool's results into the next
+      via the ``previous_results`` argument.  Use when tool N depends
+      on tool N-1's output.
+    prompt: |
+      You walk a fixed pipeline: cache → primary → enrichment.  Each
+      step builds on the previous step's output.
+    mcp_servers:
+      - name: knowledge_base
+        url: ${KB_MCP_URL}
+        tool_call_strategy: sequential
+        tools:
+          - { name: cache_lookup }
+          - { name: primary_lookup }
+          - { name: slow_lookup }
+    skills:
+      pipeline:
+        description: "Chained lookup — each tool sees the previous result."
+        steps:
+          - { tool: cache_lookup, source: mcp, server: knowledge_base }
+          - { tool: primary_lookup, source: mcp, server: knowledge_base }
+          - { tool: slow_lookup, source: mcp, server: knowledge_base }
+
+  # ── 3. Strategy: llm_decides (model picks tools) ───────────
+  smart_lookup:
+    description: >
+      Lets the LLM read the user's query and pick which subset of
+      backends to call (and with what arguments).  Use when the cost
+      of an irrelevant backend outweighs the benefit of an
+      occasional miss.
+    prompt: |
+      Decide which lookup backends are relevant to the user's
+      question and call only those.
+    mcp_servers:
+      - name: knowledge_base
+        url: ${KB_MCP_URL}
+        tool_call_strategy: llm_decides
+        tools:
+          - { name: cache_lookup }
+          - { name: primary_lookup }
+          - { name: slow_lookup }
+    skills:
+      smart_lookup_skill:
+        description: "Let the LLM choose the right subset of backends."
+        steps:
+          - { tool: cache_lookup, source: mcp, server: knowledge_base }
+          - { tool: primary_lookup, source: mcp, server: knowledge_base }
+          - { tool: slow_lookup, source: mcp, server: knowledge_base }
+
+  # ── 4. Strategy: priority (CUSTOM — short-circuit chain) ──
+  cascade_lookup:
+    description: >
+      Tries cheap caches first and falls through to slower
+      authoritative sources only when earlier tools return empty.
+      Backed by the custom ``priority`` strategy registered by
+      ``hooks/startup.py``.
+    prompt: |
+      You answer using whichever backend produces the first non-empty
+      result, fastest first.
+    mcp_servers:
+      - name: knowledge_base
+        url: ${KB_MCP_URL}
+        tool_call_strategy: priority   # ← registered by the startup hook
+        tools:
+          - { name: cache_lookup }       # tried first
+          - { name: primary_lookup }     # used only if cache misses
+          - { name: slow_lookup }        # final fallback
+    skills:
+      cascade:
+        description: "Cache → primary → slow fallback chain."
+        steps:
+          - { tool: cache_lookup, source: mcp, server: knowledge_base }
+          - { tool: primary_lookup, source: mcp, server: knowledge_base }
+          - { tool: slow_lookup, source: mcp, server: knowledge_base }
+
+  # ── 5. Agentic-loop parallel dispatch (Phase A) ─────────────
+  parallel_searcher:
+    description: >
+      Demonstrates the agent-level ``parallel_tools`` flag, which
+      partitions a single agentic-loop round into a parallel batch
+      and a sequential tail based on per-tool ``parallel_safe``
+      annotations.  Orthogonal to ``tool_call_strategy`` — applies
+      to the LLM-driven agentic loop, not skill execution.
+    prompt: |
+      Use the metric tools to build a quick situational summary.  You
+      can call multiple metric tools in the same round.
+
+    # Opt in to Phase A parallel dispatch.  Tools whose ``parallel_safe``
+    # is True (see top-level ``tools`` block) get gathered via
+    # asyncio.gather; the rest run sequentially.
+    parallel_tools: true
+
+    tools:
+      - metric_a
+      - metric_b
+      - metric_c
+
+# ── Startup hook registers the custom ``priority`` strategy ─
+#
+# Wire-up lives in orchid.yml::
+#
+#     startup:
+#       hook: examples.tool-strategies.hooks.startup.bootstrap_strategies

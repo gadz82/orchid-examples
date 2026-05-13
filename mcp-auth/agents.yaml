@@ -1,0 +1,144 @@
+# agents.yaml — MCP Authentication example
+#
+# Demonstrates all three MCP auth modes:
+#   - none (default)      — local/unauthenticated MCP server
+#   - passthrough          — forwards the graph's bearer token
+#   - oauth                — per-user third-party OAuth 2.0 flow
+#
+# Activate by pointing the config loader to this file:
+#
+#   AGENTS_CONFIG_PATH=examples/mcp-auth/agents.yaml
+#
+# This example requires three MCP servers running:
+#   - A local server (no auth)              at $LOCAL_MCP_URL
+#   - An internal server (bearer passthrough) at $INTERNAL_MCP_URL
+#   - An external CRM server (OAuth)          at $CRM_MCP_URL
+#
+# For the OAuth server, the framework follows the MCP 2025-03-26
+# authorization spec — discovery + dynamic client registration
+# (RFC 7591).  No pre-registered client is required on the operator
+# side.  ``API_BASE_URL`` must be set on orchid-api so the discovery
+# service advertises the correct redirect URI to the authorization
+# server.
+
+version: "1"
+
+defaults:
+  llm:
+    model: "ollama/llama3.2"
+    temperature: 0.2
+    # fallback_model: "ollama/mistral"  # optional: all agents fall back to this on failure
+  rag:
+    enabled: false
+
+# ── Supervisor ────────────────────────────────────────────────
+supervisor:
+  assistant_name: "Multi-Auth Demo"
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+
+  # ── Agent with NO auth MCP server ──────────────────────────
+  # Suitable for local MCP servers or servers that don't require
+  # authentication. No auth headers are sent.
+  local-tools:
+    description: |
+      Agent that uses a local MCP server with no authentication.
+      The server runs in the same network and trusts all callers.
+    prompt: |
+      You are a helpful assistant with access to local tools.
+      Use the available tools to help the user.
+    mcp_servers:
+      - name: local-server
+        type: local
+        url: "${LOCAL_MCP_URL}"
+        tools: "*"
+        prompts: "*"
+        # auth is omitted → defaults to mode: "none"
+        # No Authorization header will be sent
+
+  # ── Agent with PASSTHROUGH auth ─────────────────────────────
+  # The graph's OrchidAuthContext bearer token (from the API entry point)
+  # is forwarded unchanged to this MCP server. Use when the MCP
+  # server trusts the same identity provider as the main app.
+  internal-api:
+    description: |
+      Agent that accesses an internal API which accepts the same
+      bearer token as the main platform.
+    prompt: |
+      You are an assistant with access to internal platform APIs.
+      Use the available tools to look up data for the user.
+    mcp_servers:
+      - name: internal-platform
+        type: remote
+        url: "${INTERNAL_MCP_URL}"
+        tools: "*"
+        auth:
+          mode: passthrough
+
+  # ── Agent with OAUTH auth ───────────────────────────────────
+  # This MCP server requires its own OAuth flow with a third-party
+  # identity provider. Users must authorize via the frontend before
+  # this agent's tools become available.
+  crm-integration:
+    description: |
+      Agent that integrates with an external CRM system.
+      Requires the user to authorize access via OAuth before
+      CRM tools become available.
+    prompt: |
+      You are a CRM assistant that can search contacts, view deals,
+      and manage customer relationships. If the user hasn't connected
+      their CRM account yet, let them know they need to authorize
+      access through the connection panel.
+    mcp_servers:
+      - name: external-crm
+        type: remote
+        url: "${CRM_MCP_URL}"
+        tools: "*"
+        # MCP 2025-03-26 authorization.  On the first 401 from the
+        # MCP server the framework follows the
+        # ``WWW-Authenticate: Bearer resource_metadata="…"`` header
+        # (RFC 9728), fetches the authorization-server metadata
+        # (RFC 8414) and dynamically registers a client (RFC 7591) —
+        # no static ``client_id`` / endpoints / scopes required.
+        auth:
+          mode: oauth
+
+  # ── Agent with MIXED auth ───────────────────────────────────
+  # A single agent can connect to multiple MCP servers with
+  # different auth modes. Tools from all servers are merged into
+  # a unified tool list for the LLM.
+  hybrid-agent:
+    description: |
+      Agent with access to both local tools and external services.
+      Local tools always work. External CRM tools require OAuth
+      authorization — if not authorized, those tools are simply
+      unavailable and the agent works with reduced capabilities.
+    prompt: |
+      You are a hybrid assistant with local tools and optional
+      CRM integration. Use whatever tools are available.
+      If CRM tools are not available, work with what you have.
+    mcp_servers:
+      # Local server — no auth
+      - name: local-utils
+        type: local
+        url: "${LOCAL_MCP_URL}"
+        tools: "*"
+
+      # Platform API — passthrough auth
+      - name: platform-api
+        type: remote
+        url: "${INTERNAL_MCP_URL}"
+        tools: "*"
+        auth:
+          mode: passthrough
+
+      # External CRM — OAuth (graceful degradation if not authorized).
+      # Framework discovers endpoints + registers the client dynamically
+      # on first 401 per the MCP 2025-03-26 authorization spec.
+      - name: crm-tools
+        type: remote
+        url: "${CRM_MCP_URL}"
+        tools: "*"
+        auth:
+          mode: oauth

@@ -1,0 +1,34 @@
+# agents.yaml — Custom-storage example
+#
+# A trivial single-agent setup whose only purpose is to exercise the
+# custom JSON-file storage backend wired in ``orchid.yml``.  The agent
+# itself is a thin echo so the demo focuses on persistence, not on
+# tool use.
+
+version: "1"
+
+defaults:
+  llm:
+    model: "ollama/llama3.2"
+    temperature: 0.2
+  rag:
+    enabled: false  # No vector store needed — this example is about persistence only.
+
+# ── Agents ───────────────────────────────────────────────────
+agents:
+  echo:
+    description: >
+      Demo agent that simply confirms what the user asked.  Used to
+      generate chat history that the JSON-file storage backend then
+      persists to disk.  Re-running ``orchid chat list`` after a few
+      messages should surface the saved sessions.
+
+    prompt: |
+      You are a friendly demo assistant.  Acknowledge the user's
+      message in one short sentence and remind them that the chat is
+      being persisted to a JSON file by the custom storage backend.
+
+    tools: []
+
+    execution_hints:
+      parallel_safe: true

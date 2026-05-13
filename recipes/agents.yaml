@@ -1,0 +1,72 @@
+# agents.yaml — Recipe knowledge-base agents
+#
+# Two agents share the ``recipes`` namespace seeded by the startup
+# hook:
+#
+#   * ``cookbook``  — general recipe Q&A, ingredient substitution,
+#                     cooking technique advice.
+#   * ``mealplanner`` — meal planning across dietary restrictions,
+#                       cuisine preferences, and available ingredients.
+#
+# Both use simple dense retrieval (ChromaDB) with reformulation so
+# natural-language questions match the recipe corpus.
+#
+# Usage::
+#
+#   orchid chat send "What's a good weeknight dinner with salmon?" \
+#     --agent mealplanner \
+#     --config examples/recipes/orchid.yml
+
+version: "1"
+
+defaults:
+  llm:
+    model: ollama/llama3.2
+    temperature: 0.2
+  rag:
+    enabled: true
+    k: 5
+    retrieval:
+      strategy: simple
+      query_transformers: [reformulate]
+
+agents:
+  # ── 1. General recipe cookbook ─────────────────────────────
+  cookbook:
+    description: >
+      General cooking and recipe assistant.  Answers questions about
+      ingredients, techniques, substitutions, and walks through recipe
+      steps using the retrieved recipe corpus.
+    prompt: |
+      You are a helpful chef assisting with cooking questions.  Answer
+      using the retrieved recipe documents.  When the user asks for a
+      recipe, list the ingredients and steps clearly.  Suggest
+      substitutions when relevant.  If the retrieved documents don't
+      contain a relevant recipe, say so and offer general cooking
+      advice instead.
+    rag:
+      namespace: recipes
+      k: 5
+      retrieval:
+        strategy: simple
+        query_transformers: [reformulate]
+
+  # ── 2. Meal planner with dietary awareness ─────────────────
+  mealplanner:
+    description: >
+      Meal-planning assistant that considers dietary restrictions,
+      available ingredients, and cuisine preferences.  Builds balanced
+      weekly meal plans from the recipe corpus.
+    prompt: |
+      You are a meal-planning assistant.  Build meal plans from the
+      retrieved recipe documents.  Consider the user's dietary
+      restrictions (e.g. vegetarian, gluten-free), available
+      ingredients, and cuisine preferences.  When suggesting a recipe,
+      explain why it fits their needs.  If no suitable recipe is found,
+      offer general healthy-eating advice.
+    rag:
+      namespace: recipes
+      k: 8
+      retrieval:
+        strategy: simple
+        query_transformers: [reformulate]

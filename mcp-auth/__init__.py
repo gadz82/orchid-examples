@@ -1,0 +1,1 @@
+# MCP Authentication example

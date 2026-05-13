@@ -1,0 +1,96 @@
+# agents.yaml — RAG retrieval-strategy showcase
+#
+# Four agents share the ``release_notes`` knowledge base (seeded by
+# the startup hook) but differ on ``rag.retrieval.strategy``.  Ask
+# the same question through each and compare:
+#
+#   * ``simple``         — fastest, single dense lookup.
+#   * ``multi_query``    — paraphrase fan-out, broader recall.
+#   * ``hyde``           — hypothetical-document generation, robust to
+#                           off-distribution queries.
+#   * ``recency_simple`` — custom strategy registered by the startup
+#                           hook.  Re-ranks dense results by the
+#                           ``published_at`` metadata field.
+#
+# All four agents use the SAME prompt + namespace + k so the only
+# variable is the retrieval strategy.
+
+version: "1"
+
+defaults:
+  llm:
+    model: "gemini/gemini-flash-latest"
+    temperature: 0.2
+  rag:
+    enabled: true
+    k: 5
+    retrieval:
+      # The default strategy applies when an agent doesn't override.
+      strategy: simple
+      query_transformers: [reformulate]
+
+# ── Agents ───────────────────────────────────────────────────
+agents:
+  # ── 1. Baseline: simple dense retrieval ────────────────────
+  simple_searcher:
+    description: >
+      Vanilla single-query dense retrieval.  The fastest strategy and
+      the right default for short, well-formed questions where the
+      knowledge base contains a near-verbatim match.
+    prompt: &shared_prompt |
+      You answer release-history questions strictly from the retrieved
+      documents.  Quote release IDs (e.g. "rel-2026-04-12") when you
+      reference one.  If nothing relevant is retrieved, say so plainly.
+    rag:
+      namespace: release_notes
+      k: 5
+      retrieval:
+        strategy: simple
+        query_transformers: [reformulate]
+
+  # ── 2. Recall fan-out: multi-query paraphrasing ────────────
+  multi_query_searcher:
+    description: >
+      Fan-out retrieval that asks the LLM for N paraphrases, retrieves
+      against each, and merges by score.  Use when users phrase the
+      same intent in many different ways.
+    prompt: *shared_prompt
+    rag:
+      namespace: release_notes
+      k: 5
+      retrieval:
+        strategy: multi_query
+        query_transformers: [reformulate]
+
+  # ── 3. HyDE: hypothetical document embeddings ──────────────
+  hyde_searcher:
+    description: >
+      Generates ``n_hypothetical`` plausible answer paragraphs and
+      retrieves documents similar to those — useful when the user's
+      query is far from the corpus's surface vocabulary (e.g.
+      developer asking about a feature using marketing terms).
+    prompt: *shared_prompt
+    rag:
+      namespace: release_notes
+      k: 5
+      retrieval:
+        strategy: hyde
+        query_transformers: [reformulate]
+        # HyDE-specific knob — flows in via HyDERetrieval.from_config.
+        hyde:
+          n_hypothetical: 2
+
+  # ── 4. CUSTOM: recency-weighted simple retrieval ───────────
+  recency_searcher:
+    description: >
+      Custom strategy registered by the startup hook.  Pulls the same
+      dense candidates as ``simple`` but re-ranks by the
+      ``published_at`` metadata field so newer notes win ties.  Pair
+      with a fast strategy when the corpus is time-sensitive.
+    prompt: *shared_prompt
+    rag:
+      namespace: release_notes
+      k: 5
+      retrieval:
+        strategy: recency_simple   # ← registered at startup
+        query_transformers: [reformulate]

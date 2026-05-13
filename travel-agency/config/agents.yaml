@@ -1,0 +1,321 @@
+# agents.yaml — Travel Agency example
+#
+# Showcases:
+#   - Multi-agent sequential pipeline (flights → hotels → itinerary → bookings)
+#   - Custom OrchidAgent subclass (ItineraryAgent) via ``class:`` path
+#   - HITL tool approval on booking tools (``requires_approval: true``)
+#   - Multi-query retriever for destination recall
+#   - Grounding guardrails on recommendation agents
+#   - Orchestrator-level skill ("plan_trip") that chains all agents
+#
+# Activate via::
+#
+#   AGENTS_CONFIG_PATH=examples/travel-agency/config/agents.yaml
+#
+
+version: "1"
+
+defaults:
+  llm:
+    model: "gemini/gemini-flash-latest"
+    temperature: 0.3
+    fallback_model: "ollama/llama3.2"
+    retry_attempts: 2
+  rag:
+    enabled: false
+    retrieval:
+      strategy: multi_query           # LLM generates query variations for broader recall
+      query_transformers: [reformulate]  # rewrite the user query once at agent entry
+  cache_enabled: true  # enable LangChain global LLM response cache
+
+# ── Supervisor ────────────────────────────────────────────────
+supervisor:
+  assistant_name: "Travel AI"
+  streaming_enabled: true
+  history_summary_enabled: true
+  history_summary_recent_turns: 6
+
+# ── Global guardrails ────────────────────────────────────────
+guardrails:
+  input:
+    - type: prompt_injection
+      fail_action: block
+    - type: max_length
+      fail_action: block
+      config:
+        max_characters: 5000
+  output:
+    - type: pii_detection
+      fail_action: redact
+      config:
+        entities: [email, phone, credit_card, ssn]
+
+# ── Built-in tool declarations ────────────────────────────────
+tools:
+  search_flights:
+    handler: "examples.travel-agency.tools.flights.search_flights"
+    description: "Search available flights by origin, destination, cabin, price cap."
+    parameters:
+      origin:
+        type: string
+        description: "Origin airport code (e.g. 'JFK', 'LAX')"
+        required: false
+        default: ""
+      destination:
+        type: string
+        description: "Destination airport code (e.g. 'LHR', 'CDG')"
+        required: false
+        default: ""
+      cabin:
+        type: string
+        description: "'economy' or 'business'"
+        required: false
+        default: ""
+      max_price_usd:
+        type: float
+        description: "Optional price cap in USD (0 = no limit)"
+        required: false
+        default: 0
+
+  get_flight_details:
+    handler: "examples.travel-agency.tools.flights.get_flight_details"
+    description: "Look up details for a specific flight by flight number."
+    parameters:
+      flight_no:
+        type: string
+        description: "Flight number (e.g. 'AA101')"
+        required: true
+
+  search_hotels:
+    handler: "examples.travel-agency.tools.hotels.search_hotels"
+    description: "Search hotels by city, rating, price, and amenities."
+    parameters:
+      city:
+        type: string
+        description: "Destination city (e.g. 'London', 'Tokyo')"
+        required: false
+        default: ""
+      min_stars:
+        type: int
+        description: "Minimum star rating (0 = any)"
+        required: false
+        default: 0
+      max_nightly_usd:
+        type: float
+        description: "Maximum nightly price in USD (0 = no limit)"
+        required: false
+        default: 0
+      required_amenity:
+        type: string
+        description: "Required amenity (e.g. 'wifi', 'gym', 'spa')"
+        required: false
+        default: ""
+
+  get_hotel_details:
+    handler: "examples.travel-agency.tools.hotels.get_hotel_details"
+    description: "Look up details for a specific hotel by ID."
+    parameters:
+      hotel_id:
+        type: string
+        description: "Hotel ID (e.g. 'HTL-LON-001')"
+        required: true
+
+  book_flight:
+    handler: "examples.travel-agency.tools.bookings.book_flight"
+    description: "Confirm a flight booking for a passenger. Requires human approval."
+    requires_approval: true   # ← HITL (Enhancement #7)
+    parameters:
+      flight_no:
+        type: string
+        required: true
+      passenger_name:
+        type: string
+        required: true
+
+  book_hotel:
+    handler: "examples.travel-agency.tools.bookings.book_hotel"
+    description: "Confirm a hotel booking for a guest. Requires human approval."
+    requires_approval: true   # ← HITL (Enhancement #7)
+    parameters:
+      hotel_id:
+        type: string
+        required: true
+      guest_name:
+        type: string
+        required: true
+      check_in:
+        type: string
+        description: "Check-in date (YYYY-MM-DD)"
+        required: true
+      check_out:
+        type: string
+        description: "Check-out date (YYYY-MM-DD)"
+        required: true
+
+  cancel_booking:
+    handler: "examples.travel-agency.tools.bookings.cancel_booking"
+    description: "Cancel an existing booking. Requires human approval."
+    requires_approval: true
+    parameters:
+      booking_id:
+        type: string
+        required: true
+
+  list_bookings:
+    handler: "examples.travel-agency.tools.bookings.list_bookings"
+    description: "List all bookings placed in this session."
+
+# ── Orchestrator-level skills ────────────────────────────────
+skills:
+  plan_trip:
+    description: >
+      Full trip-planning workflow: search flights, search hotels, then
+      synthesise a day-by-day itinerary.  Booking is a separate step
+      (human approval required).
+    steps:
+      - agent: flights
+        instruction: "Find candidate flights matching the traveller's preferences and budget."
+      - agent: hotels
+        instruction: "Find hotels in the destination city matching budget and amenity preferences."
+      - agent: itinerary
+        instruction: "Build a day-by-day plan grounded in the flight and hotel options found above."
+
+  book_my_trip:
+    description: >
+      Book both a flight and a hotel in sequence after the user has
+      approved the plan.  Each booking triggers an HITL interrupt.
+    steps:
+      - agent: bookings
+        instruction: "Book the confirmed flight for the traveller."
+      - agent: bookings
+        instruction: "Book the confirmed hotel for the traveller."
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  # ── Flight search specialist ─────────────────────────────────
+  flights:
+    description: >
+      Flight search expert.  Searches inventory by route, cabin, and
+      budget, and presents options sorted by price.  Does NOT book.
+
+    prompt: |
+      You are a flight search assistant.
+
+      CRITICAL GROUNDING RULES:
+      - ONLY show flights returned by the search_flights tool.
+      - NEVER invent flight numbers, airlines, times, or prices.
+      - If no flights match, say so clearly and suggest widening the search.
+
+      Present results compactly:
+      - Flight number, airline, cabin
+      - Departure and arrival times
+      - Price
+      - Seats available (if low, mention it)
+
+    tools:
+      - search_flights
+      - get_flight_details
+
+    guardrails:
+      output:
+        - type: groundedness
+          fail_action: warn
+          config:
+            min_overlap: 0.2
+
+    rag:
+      enabled: false
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Hotel search specialist ──────────────────────────────────
+  hotels:
+    description: >
+      Hotel search expert.  Finds accommodations by city, rating,
+      budget, and amenities.  Does NOT book.
+
+    prompt: |
+      You are a hotel search assistant.
+
+      CRITICAL GROUNDING RULES:
+      - ONLY show hotels returned by the search_hotels tool.
+      - NEVER invent hotel names, IDs, prices, or amenities.
+      - If no hotels match, say so and suggest relaxing filters.
+
+      Present results compactly:
+      - Hotel name and ID
+      - Stars and city
+      - Nightly price
+      - Key amenities (max 3 shown)
+      - Nearby landmarks
+
+    tools:
+      - search_hotels
+      - get_hotel_details
+
+    guardrails:
+      output:
+        - type: groundedness
+          fail_action: warn
+          config:
+            min_overlap: 0.2
+
+    rag:
+      enabled: false
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Itinerary planner (custom agent class) ──────────────────
+  itinerary:
+    class: examples.travel-agency.agents.itinerary.ItineraryAgent
+    description: >
+      Synthesises a day-by-day travel plan from sibling agent results
+      (flights + hotels) plus destination RAG context.  Use after
+      flight and hotel search are complete.
+
+    prompt: |
+      (Handled by ItineraryAgent.run() — this prompt is unused.)
+
+    rag:
+      namespace: destinations
+      k: 5
+      retrieval:
+        strategy: multi_query   # generate query variations for recall
+        query_transformers: [reformulate]
+
+    execution_hints:
+      parallel_safe: false
+
+  # ── Booking agent (HITL-gated tools) ────────────────────────
+  bookings:
+    description: >
+      Booking specialist.  Confirms flights and hotels, cancels bookings.
+      All booking tools require human approval (HITL).
+
+    prompt: |
+      You are a booking assistant.
+
+      CRITICAL RULES:
+      - Confirm the exact flight_no / hotel_id the user chose before booking.
+      - Ask for passenger/guest name if missing.
+      - Ask for check-in / check-out dates for hotels (YYYY-MM-DD).
+      - When a tool is pending approval, tell the user what is about to
+        happen in plain language.  The system will pause for their consent.
+      - NEVER book without all required fields.
+
+    tools:
+      - book_flight
+      - book_hotel
+      - cancel_booking
+      - list_bookings
+
+    rag:
+      enabled: false
+
+    execution_hints:
+      parallel_safe: false
+      depends_on:
+        - flights
+        - hotels

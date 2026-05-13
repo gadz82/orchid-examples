@@ -1,0 +1,109 @@
+# agents.yaml — Wiki knowledge-base RAG showcase
+#
+# Demonstrates the full ingestion → retrieval pipeline that landed in
+# Stages 2 / 4 / 7 of the RAG redesign (ADR-022, ADR-024, ADR-025):
+#
+#   * Two-tier corpus — short FAQ snippets + long doc pages — ingested
+#     with two different strategies (``headered`` for the docs to keep
+#     section context, ``recursive`` for the FAQs).
+#   * Hybrid retrieval (``hybrid`` strategy) so jargon-heavy queries
+#     still hit BM25 even when dense embeddings miss.
+#   * Per-tool override (ADR-024) — the ``lookup_glossary`` tool's
+#     results land in a *different* ingestion layout (semantic
+#     boundaries) and a *different* namespace (``glossary_cache``) so
+#     they don't pollute the long-form docs corpus.
+#
+# Seeded by ``hooks/startup.bootstrap_wiki``.
+
+version: "1"
+
+defaults:
+  llm:
+    model: "gemini/gemini-flash-latest"
+    temperature: 0.2
+  rag:
+    enabled: true
+    k: 5
+    # Default ingestion: ``recursive`` works well for short snippets.
+    ingestion:
+      strategy: recursive
+      chunk_size: 600
+      chunk_overlap: 100
+    retrieval:
+      strategy: simple
+      query_transformers: [reformulate]
+
+# ── Built-in tools (ADR-017) ─────────────────────────────────
+tools:
+  lookup_glossary:
+    handler: examples.wiki.hooks.tools.lookup_glossary
+    description: >
+      Fetch a term's definition from the glossary store.  Results are
+      cached into RAG so future ``hybrid`` lookups can pull definitions
+      alongside doc-page hits.
+    inject_to_rag: true
+    rag_ttl: 3600
+    # ── ADR-024 per-tool RAG override ────────────────────────
+    rag:
+      namespace: glossary_cache
+      ingestion:
+        # Glossary entries are coherent paragraphs — semantic
+        # boundaries chunk them at topic shifts rather than fixed
+        # character counts.
+        strategy: semantic
+      retrieval:
+        # Glossary lookups don't need the dense+sparse fan-out.
+        strategy: simple
+    parameters:
+      term:
+        type: string
+        description: "The term to look up."
+        required: true
+
+# ── Agents ───────────────────────────────────────────────────
+agents:
+  # ── 1. Long-form docs agent ────────────────────────────────
+  docs:
+    description: >
+      Answers questions from the long-form documentation corpus.
+      Ingestion uses ``headered`` so each chunk carries its parent
+      section header — important when users ask about features by
+      heading rather than body text.
+    prompt: |
+      You answer documentation questions strictly from the retrieved
+      chunks.  Quote the section title (e.g. "Configuration > RAG")
+      when relevant.  If nothing matches, say so plainly.
+    rag:
+      namespace: wiki_docs
+      k: 5
+      ingestion:
+        # Wraps recursive splitting with a contextual-header
+        # post-processor.  Each chunk is prepended with the source
+        # file + the nearest preceding markdown heading.
+        strategy: headered
+        chunk_size: 800
+        chunk_overlap: 150
+      retrieval:
+        # Hybrid fan-out: dense recall for semantic matches + BM25
+        # for exact term matches (jargon, error codes, IDs).
+        strategy: hybrid
+        query_transformers: [reformulate]
+        hybrid:
+          sparse_encoder: bm25
+          fusion: rrf
+          rrf_k: 60
+    tools: [lookup_glossary]
+
+  # ── 2. FAQ agent ───────────────────────────────────────────
+  faq:
+    description: >
+      Short-form FAQ agent.  Inherits the default ``recursive``
+      ingestion and ``simple`` retrieval — FAQs are tight enough that
+      hybrid + headered would just add latency.
+    prompt: |
+      You answer FAQ-style questions from the retrieved snippets.
+      Match the user's tone (casual, terse).  If nothing matches,
+      suggest they try the documentation agent instead.
+    rag:
+      namespace: wiki_faq
+      k: 3

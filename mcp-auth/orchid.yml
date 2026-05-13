@@ -1,0 +1,27 @@
+# orchid.yml — MCP Authentication example runtime config
+#
+# Demonstrates the MCP OAuth token store configuration.
+# Set environment variables for the MCP server URLs before running.
+
+agents:
+  config_path: examples/mcp-auth/agents.yaml
+
+llm:
+  model: ollama/llama3.2
+
+auth:
+  dev_bypass: true    # Skip platform auth for local testing
+
+# ── MCP OAuth token storage ──────────────────────────────────
+# Tokens for third-party OAuth MCP servers are stored per-user
+# in the same database as chat history (shared migration system).
+# Default uses SQLite; switch to PostgreSQL for production.
+mcp_auth:
+  token_store_class: orchid_ai.persistence.mcp_token_sqlite.OrchidSQLiteMCPTokenStore
+  token_store_dsn: ~/.orchid/chats.db  # same DB as chat storage
+
+# ── API base URL (for constructing OAuth callback URLs) ──────
+# The OAuth callback endpoint is: {api_base_url}/mcp/auth/callback
+# Must be reachable from the user's browser.
+api:
+  base_url: http://localhost:8000

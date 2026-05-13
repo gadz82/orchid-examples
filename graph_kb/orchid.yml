@@ -1,0 +1,52 @@
+# orchid.yml — GraphRAG knowledge-base demo configuration
+#
+# Pairs with ``agents.yaml``.  The startup hook seeds the
+# ``InMemoryGraphStore`` with org-chart entities and edges, plus a
+# few text chunks for vector fan-out.
+#
+# Usage::
+#
+#   ORCHID_CONFIG=examples/graph_kb/orchid.yml \
+#     uvicorn orchid_api.main:app --port 8000
+#
+# Or via the CLI::
+#
+#   orchid chat send "Who does Bob report to?" \
+#     --agent org_chart \
+#     --config examples/graph_kb/orchid.yml
+
+# ── Agent config ─────────────────────────────────────────────
+agents:
+  config_path: examples/graph_kb/agents.yaml
+
+# ── LLM ──────────────────────────────────────────────────────
+llm:
+  model: gemini/gemini-flash-latest
+
+# ── Auth (demo: dev bypass) ──────────────────────────────────
+auth:
+  dev_bypass: true
+
+# ── RAG / Vector DB ──────────────────────────────────────────
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  embedding_model: gemini/gemini-embedding-001  # 3072-d
+
+# ── Document upload ──────────────────────────────────────────
+upload:
+  namespace: uploads
+  max_size_mb: 20
+
+# ── Chat persistence ─────────────────────────────────────────
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: /data/graph_kb_chats.db
+
+# ── Startup hook seeds the in-memory graph + vector chunks ───
+startup:
+  hook: examples.graph_kb.hooks.startup.bootstrap_graph_kb
+
+# ── Observability ────────────────────────────────────────────
+tracing:
+  langsmith_tracing: false

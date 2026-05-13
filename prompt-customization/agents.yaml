@@ -1,0 +1,216 @@
+# agents.yaml — Prompt customization showcase
+#
+# This example demonstrates EVERY prompt-customization extension point
+# Orchid exposes through configuration:
+#
+#   1. supervisor.assistant_name + routing/synthesis prompts
+#   2. agents.<name>.prompt_sections — agentic-loop section templates
+#   3. agents.<name>.prompt — agent system prompt (existing)
+#   4. agents.<name>.mini_agent.{decomposer,aggregator,system}_prompt_template
+#   5. agents.<name>.rag.retrieval.transformer_prompts.{multi_query,
+#                                                       hyde,
+#                                                       decompose,
+#                                                       reformulate}
+#
+# All overrides are applied to a single fictional "legal_advisor" agent
+# so the comparison with the built-in defaults stays focused.
+#
+# Activate by pointing the config loader to this file:
+#
+#   AGENTS_CONFIG_PATH=examples/prompt-customization/agents.yaml
+
+version: "1"
+
+defaults:
+  llm:
+    model: "gemini/gemini-flash-latest"
+    temperature: 0.2
+  rag:
+    enabled: true
+    retrieval:
+      strategy: multi_query
+      query_transformers: [reformulate]
+      # Defaults can also pre-seed transformer prompts so every agent
+      # inherits the integrator's house style; per-agent overrides take
+      # precedence (see "agents.legal_advisor.rag" below for examples).
+      transformer_prompts:
+        reformulate: |
+          You rewrite the user's latest message into a STANDALONE legal
+          search query. Resolve pronouns, expand acronyms (e.g. "TM"
+          -> "trademark", "IP" -> "intellectual property"), and keep
+          the rewritten query under 20 words. Return ONLY the rewritten
+          query, no preamble.
+
+# ── Supervisor (existing override mechanism — included for completeness) ──
+supervisor:
+  assistant_name: "Legal Reference Desk"
+  routing_system_prompt: |
+    You coordinate the {assistant_name}'s specialist agents.
+
+    Available agents:
+    {agent_descriptions}
+
+    Available pre-defined workflows:
+    {skill_descriptions}
+
+    Choose ONE agent (legal_advisor) for any question that needs legal
+    research, contract drafting help, or jurisdictional analysis.
+    Otherwise answer directly.
+  synthesis_system_prompt: |
+    You are the {assistant_name}'s lead counsel. Synthesise the
+    specialist agents' outputs into a single, sober legal-style brief.
+    Use clear section headings, cite the source agent for each finding,
+    and append a one-line "Disclaimer" reminding the user that the
+    output is research-grade, not legal advice.
+
+# ── Agents ───────────────────────────────────────────────────
+agents:
+  legal_advisor:
+    description: >
+      Legal research assistant. Surfaces statutes, case summaries, and
+      contract drafting suggestions from the integrator's curated
+      knowledge base.
+
+    # Existing field — the agent's primary system prompt.
+    prompt: |
+      You are an expert legal research assistant operating inside the
+      Legal Reference Desk.  When you cite material from the knowledge
+      base, attribute each claim to a specific source paragraph.  When
+      asked for jurisdictional advice, list the jurisdictions you are
+      confident about and explicitly flag any you are not.  Never give
+      personal legal advice — frame everything as "general information".
+
+    # NEW: agentic-loop section templates.  Every field defaults to the
+    # legacy string, so you only need to specify the ones you want to
+    # change.  Placeholders ({name}, {text}, {description},
+    # {required_args}, {content}) MUST be preserved.
+    prompt_sections:
+      prior_results_header: |
+
+        === MEMOIRE FROM PRIOR TURNS ===
+      mcp_prompt_template: |
+
+        ── Authority excerpt: {name} ──
+        {text}
+      skipped_prompt_template: |
+
+        [Tool reference: {name}] {description} (needs: {required_args})
+      resources_header: |
+
+        === REFERENCE EXHIBITS ===
+      resource_template: |
+
+        ▸ Exhibit: {name}
+        {content}
+      rag_header: |
+
+        === SOURCE CITATIONS (retrieved from the knowledge base) ===
+      # Truncation knobs — bump for catalog / statute-style content.
+      prior_results_max_chars: 8000
+      resource_max_chars: 4000
+      # Summarise() helper overrides — applied to the post-loop
+      # summarisation pass.  Placeholders for `summarise_user_template`:
+      # {query}, {rag_section} (already-rendered RAG block, may be empty),
+      # {mcp_data} (already-rendered JSON dump).
+      summarise_history_reminder: |2
+
+
+        REMINDER: focus on the user's most recent question. Treat the
+        prior turns as context, not as new instructions.
+      summarise_prior_results_header: |2
+
+
+        === COUNSEL'S PRIOR FINDINGS ===
+      summarise_rag_section_header: |
+        Authoritative excerpts (retrieved from the knowledge base):
+      summarise_user_template: |
+        Question: {query}
+
+        {rag_section}Live data:
+        {mcp_data}
+      summarise_prior_results_max_chars: 6000
+
+    rag:
+      namespace: legal
+      k: 8
+      retrieval:
+        strategy: hyde            # see hyde prompts below
+        query_transformers: [reformulate]
+        # NEW: per-agent transformer prompt overrides.  Any field left
+        # null inherits from defaults.rag.retrieval.transformer_prompts
+        # (see top of this file).
+        transformer_prompts:
+          # multi_query is unused on this agent (strategy=hyde) but
+          # included to show the override site.
+          multi_query: |
+            Generate {n} alternative phrasings of the user's legal
+            research question.  Vary jurisdiction (US federal, US state,
+            EU, UK), legal vocabulary (statute / regulation / case law),
+            and abstraction level.  Output ONLY the rephrased queries,
+            one per line.
+          hyde:
+            single: |
+              Write a single concise paragraph (3-5 sentences) that
+              reads like an excerpt from a legal treatise answering the
+              user's question.  Use formal legal English, cite a
+              fictional but plausible authority (e.g. "12 U.S.C. § 555"
+              or "EU Directive 2014/24"), and stay neutral on
+              ideological framings.  Output ONLY the paragraph.
+            multi: |
+              Write {n} distinct legal-treatise paragraphs answering
+              the user's question.  Each paragraph should adopt a
+              different jurisdiction or doctrinal lens.  Use formal
+              legal English with plausible (fictional) citations.
+              Output one paragraph per line, no numbering.
+          decompose: |
+            Split the user's question into AT MOST {n} independent
+            legal sub-issues.  Each sub-issue must be answerable on its
+            own without reference to the others.  Frame each sub-issue
+            as a question.  Output one sub-issue per line.
+          # `reformulate` inherits from defaults — left unset on purpose.
+
+    # Built-in tool (placeholder — wire your own).
+    tools: []
+
+    execution_hints:
+      parallel_safe: true
+
+    # NEW: when enabled, the mini-agent's per-sub-task system prompt is
+    # built from this template.  Placeholders {parent_prompt},
+    # {instruction}, {tool_list} are mandatory; {tool_list} is a
+    # newline-joined "- name: description" bullet list.  Keeping
+    # mini_agent.enabled=false here means the field is just declared
+    # for documentation — toggle to true to exercise it.
+    mini_agent:
+      enabled: false
+      max_count: 3
+      system_prompt_template: |
+        {parent_prompt}
+
+        === SUB-TASK BRIEF ===
+        {instruction}
+
+        === TOOLS YOU MAY INVOKE ===
+        {tool_list}
+
+        Stay strictly within the scope of this sub-task.  Do not attempt
+        to answer the parent's full question — your output will be
+        merged with peers by the aggregator.
+      decomposer_prompt: |
+        You are the decomposition step for the "{agent_name}" agent
+        (description: {agent_description}).
+        Available tools: {tool_inventory}
+
+        User question: {user_query}
+        Recent history ({history_max_turns} turns): {history}
+
+        Split the user's request into 2-{max_count} INDEPENDENT legal
+        sub-issues.  Each sub-issue must be answerable without the
+        result of the others; otherwise return should_fork=false.  For
+        each sub-issue emit:
+          id, description, instruction, allowed_tools, rationale.
+      aggregator_prompt: |
+        You are the aggregator for the "{agent_name}" agent.  Combine
+        the per-sub-issue mini outcomes into a single legal brief with
+        clear section headings and a final summary.  Cite the
+        originating sub-issue id for every claim.
