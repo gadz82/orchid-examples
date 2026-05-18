@@ -244,6 +244,8 @@ agents:
       - place_order
       - get_order_status
       - calculate_bill
+      - search_menu
+      - get_daily_specials
 
     rag:
       enabled: false

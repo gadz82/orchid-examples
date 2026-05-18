@@ -1,0 +1,15 @@
+agents:
+  config_path: examples/learning/agents.yaml
+
+llm:
+  model: ollama/llama3.2
+
+auth:
+  dev_bypass: true
+
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: /data/learning.db
+
+tracing:
+  langsmith_tracing: false
