@@ -85,10 +85,11 @@ def place_order(items: str = "", table_number: int = 0, **kwargs: Any) -> dict[s
     dict
         Order confirmation with order_id, items, total, and estimated time.
     """
-    if not items:
+    items_str = items or kwargs.get("query", "")
+    if not items_str:
         return {"error": "No items specified. Please provide comma-separated menu item names."}
 
-    item_list = [i.strip() for i in items.split(",") if i.strip()]
+    item_list = [i.strip() for i in items_str.split(",") if i.strip()]
     order_items = []
     unknown = []
 

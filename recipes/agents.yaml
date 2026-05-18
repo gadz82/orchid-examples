@@ -13,8 +13,8 @@
 #
 # Usage::
 #
-#   orchid chat send "What's a good weeknight dinner with salmon?" \
-#     --agent mealplanner \
+#   orchid chat create --config examples/recipes/orchid.yml
+#   orchid chat send <chat_id> "What's a good weeknight dinner with salmon?" \
 #     --config examples/recipes/orchid.yml
 
 version: "1"

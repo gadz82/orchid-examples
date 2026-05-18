@@ -30,16 +30,18 @@ vector storage.  No Docker, no Qdrant, no external services.
 # Install dependencies (run from repo root)
 pip install -e orchid -e orchid-cli
 
-# Send a recipe question
-orchid chat send "What can I make with chicken?" \
+# Create a chat and note the returned ID
+orchid chat create --config examples/recipes/orchid.yml
+
+# Send a recipe question (replace <chat_id> with the ID from above)
+orchid chat send <chat_id> "What can I make with chicken?" \
   --config examples/recipes/orchid.yml
 
-# Ask for a meal plan
-orchid chat send "Plan a vegan dinner for Monday" \
-  --agent mealplanner \
+# Ask for a meal plan in the same chat
+orchid chat send <chat_id> "Plan a vegan dinner for Monday" \
   --config examples/recipes/orchid.yml
 
-# Interactive session
+# Or use interactive mode (no chat_id needed)
 orchid chat interactive --config examples/recipes/orchid.yml
 
 # Check ChromaDB path
