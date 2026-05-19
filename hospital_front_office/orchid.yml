@@ -1,0 +1,49 @@
+# orchid.yml — Hospital Front-Office demo configuration
+#
+# Self-contained demo: four agents (department navigator, bureaucracy,
+# opening hours, emergency triage) with RAG-based knowledge ingestion
+# and SQLite storage. No MCP servers or external APIs required.
+#
+# Usage:
+#   ORCHID_CONFIG=examples/hospital_front_office/orchid.yml uvicorn orchid_api.main:app
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  config_path: examples/hospital_front_office/agents.yaml
+
+# ── LLM ───────────────────────────────────────────────────────
+llm:
+  model: ollama/llama3.2
+  ollama_api_base: http://host.docker.internal:11434
+
+# ── Auth ──────────────────────────────────────────────────────
+auth:
+  dev_bypass: false
+  identity_resolver_class: examples.hospital_front_office.identity.HospitalIdentityResolver
+
+# ── RAG / Vector DB ──────────────────────────────────────────
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  embedding_model: ollama/nomic-embed-text
+
+# ── Document upload ───────────────────────────────────────────
+upload:
+  vision_model: ollama/minicpm-v
+  namespace: uploads
+  max_size_mb: 20
+  chunk_size: 1000
+  chunk_overlap: 200
+
+# ── Chat persistence ─────────────────────────────────────────
+storage:
+  class: examples.basketball.storage.sqlite.OrchidSQLiteChatStorage
+  dsn: /data/hospital_chats.db
+
+# ── Startup hook seeds knowledge into RAG ────────────────────
+startup:
+  hook: examples.hospital_front_office.hooks.startup.seed_hospital_knowledge
+
+# ── Observability ─────────────────────────────────────────────
+tracing:
+  langsmith_tracing: false

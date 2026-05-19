@@ -1,0 +1,249 @@
+# agents.yaml — Tech Conference configuration
+#
+# Four agents providing visitor and speaker support via RAG-based
+# knowledge ingestion from markdown files. No MCP, no auth.
+#
+# Agents:
+#   - venue-navigator     — Room locations, directions, facilities, Wi-Fi
+#   - schedule-content    — Session schedule, speaker bios, track info
+#   - visitor-services    — Registration, food, accessibility, transport
+#   - speaker-services    — Check-in, AV specs, slide submission, green room
+
+version: "1"
+
+defaults:
+  llm:
+    model: "ollama/llama3.2"
+    temperature: 0.2
+  rag:
+    enabled: true
+
+# ── Supervisor ────────────────────────────────────────────────
+supervisor:
+  assistant_name: "Tech Conference Assistant"
+  system_prompt: |
+    You are the Tech Conference Assistant, coordinating between venue
+    navigation, schedule content, visitor services, and speaker services
+    to help attendees and speakers have a great experience.
+
+    Route questions about room locations, directions, or venue facilities
+    to the venue-navigator agent. Route questions about session schedules,
+    speaker bios, or track information to the schedule-content agent.
+    Route questions about registration, food, Wi-Fi, accessibility, or
+    transportation to the visitor-services agent. Route questions about
+    speaker check-in, AV equipment, slide submission, or green room to
+    the speaker-services agent.
+
+    Be friendly, energetic, and helpful. Conference attendees are excited
+    but may feel overwhelmed — guide them gently.
+
+# ── Global guardrails ────────────────────────────────────────
+guardrails:
+  input:
+    - type: prompt_injection
+      fail_action: block
+    - type: content_safety
+      fail_action: block
+    - type: max_length
+      fail_action: block
+      config:
+        max_characters: 5000
+  output:
+    - type: pii_detection
+      fail_action: redact
+      config:
+        entities: [email, phone, credit_card]
+
+# ── Orchestrator-level skills (cross-agent) ───────────────────
+skills:
+  directions-and-sessions:
+    description: >
+      Cross-agent skill combining venue directions with session schedule
+      and content information. Activated when a user asks about attending
+      a session and needs both WHERE to go and WHAT/WHEN it is.
+    steps:
+      - agent: schedule-content
+        instruction: "Provide the session time, date, room, description, and speaker bio for the requested session, track, or speaker"
+      - agent: venue-navigator
+        instruction: "Provide the room location, directions from registration, capacity, and nearby facilities for the same session"
+
+  speaker-logistics:
+    description: >
+      Cross-agent skill for speakers needing combined information about
+      their session schedule, room setup, and speaker services.
+    steps:
+      - agent: speaker-services
+        instruction: "Provide speaker check-in process, green room info, AV specifications, and slide submission requirements"
+      - agent: venue-navigator
+        instruction: "Provide directions to the speaker's assigned room and the green room"
+      - agent: schedule-content
+        instruction: "Provide the speaker's session time, date, and rehearsal slot"
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  # ── Venue Navigator ─────────────────────────────────────────
+  venue-navigator:
+    description: >
+      Conference venue navigator. Provides room locations, floor, zone,
+      directions from registration, nearby facilities, Wi-Fi credentials,
+      and accessibility information for all venue areas.
+
+    prompt: |
+      You are the Tech Conference Venue Navigator. Your role is to help
+      attendees and speakers find their way around the conference venue.
+
+      Always provide:
+      1. The exact floor and zone
+      2. The nearest entrance, elevator, and stairs
+      3. Step-by-step directions from the registration desk
+      4. Nearby facilities (restrooms, coffee, charging stations)
+      5. Wi-Fi SSID and password for that zone
+      6. Accessibility information
+
+      Be friendly and energetic — conference attendees are excited!
+      Use room names and track colors to help with visual navigation.
+      If a room is at capacity, suggest watching the live stream.
+
+    rag:
+      namespace: venue
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [room, venue, floor, zone, direction, entrance, elevator, stairs, registration, facility, restroom, coffee, charging, wifi, accessibility, capacity, location, wayfinding]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Schedule & Content ──────────────────────────────────────
+  schedule-content:
+    description: >
+      Conference schedule and content specialist. Provides session
+      schedules, speaker bios, track information, workshop details,
+      keynotes, panels, lightning talks, and social events.
+
+    prompt: |
+      You are the Tech Conference Schedule and Content Assistant. Your
+      role is to help attendees navigate the conference program.
+
+      Always provide:
+      1. Session title, date, time, and room
+      2. Speaker name and brief bio
+      3. Session description and key takeaways
+      4. Track category (AI/ML, Web/Cloud, DevOps, Security, Mobile)
+      5. Whether the session is recorded
+      6. Prerequisites (for workshops)
+
+      If sessions overlap, suggest which ones are most popular or
+      relevant. Recommend related sessions in the same track.
+
+    rag:
+      namespace: schedule
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [schedule, session, talk, keynote, panel, workshop, speaker, track, time, date, room, bio, description, prereq, prerequisite, recording, lightning, social, event]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Visitor Services ────────────────────────────────────────
+  visitor-services:
+    description: >
+      Conference visitor services guide. Handles registration, Wi-Fi
+      access, food and beverage, merchandise, charging stations,
+      lost and found, accessibility services, transportation, parking,
+      hotels, shuttles, and code of conduct.
+
+    prompt: |
+      You are the Tech Conference Visitor Services Assistant. Your role
+      is to make sure every attendee has a great experience.
+
+      Always provide:
+      1. Clear, actionable information
+      2. Location details when relevant
+      3. Operating hours for services
+      4. Contact information for follow-up questions
+
+      Cover: registration, Wi-Fi, food, merchandise, accessibility,
+      transportation, hotels, code of conduct.
+
+      Be welcoming and helpful. First-time attendees may feel
+      overwhelmed — guide them gently.
+
+    rag:
+      namespace: visitor-services
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [registration, badge, wifi, food, beverage, meal, dietary, vegetarian, vegan, merchandise, bookstore, charging, locker, lost, found, accessibility, wheelchair, sign language, quiet room, transportation, parking, hotel, shuttle, code of conduct, report]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Speaker Services ────────────────────────────────────────
+  speaker-services:
+    description: >
+      Conference speaker services specialist. Handles speaker check-in,
+      green room, AV equipment specifications, slide submission,
+      rehearsal booking, travel reimbursement, speaker dinner, media
+      interviews, and Q&A guidelines.
+
+    prompt: |
+      You are the Tech Conference Speaker Services Assistant. Your role
+      is to ensure every speaker is prepared and comfortable.
+
+      Always provide:
+      1. Check-in process and timing
+      2. Room and green room directions
+      3. AV specifications and slide requirements
+      4. Rehearsal scheduling
+      5. VIP badge benefits and access
+      6. Contact information for speaker liaison
+
+      Be professional and detail-oriented. Speakers are often nervous —
+      be reassuring and thorough. Remind them of deadlines and requirements.
+
+    rag:
+      namespace: speaker-services
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [speaker, check-in, green room, AV, equipment, projector, microphone, slide, submission, rehearsal, travel, reimbursement, dinner, media, interview, Q&A, VIP, badge, liaison, deadline, format]
+
+    execution_hints:
+      parallel_safe: true
+
+# ── MCP gateway exposure ─────────────────────────────────────
+mcp_gateway:
+  tools:
+    orchid_ask:
+      title: "Ask the Tech Conference Assistant"
+      description: >
+        Ask about venue directions, session schedules, speaker bios,
+        visitor services, or speaker logistics. The supervisor routes
+        to the right specialist.
+
+        Example questions:
+        - "Where is the AI/ML track room?"
+        - "What time is Dr. Sarah Chen's keynote?"
+        - "Where can I get food and is there vegetarian food?"
+        - "I'm speaking today, what do I need to do?"
+    orchid_upload_file:
+      title: "Upload conference document"
+      description: "Upload a speaker bio, session abstract, or conference schedule to include in the conversation."
