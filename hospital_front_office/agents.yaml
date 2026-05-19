@@ -1,0 +1,239 @@
+# agents.yaml — Hospital Front-Office configuration
+#
+# Four agents providing patient and visitor support via RAG-based
+# knowledge ingestion from markdown files. No MCP, no auth.
+#
+# Agents:
+#   - department-navigator  — Floor, wing, directions, accessibility
+#   - bureaucracy-procedures — Registration, documents, certificates
+#   - opening-hours         — Visiting times, schedules, exceptions
+#   - emergency-triage      — Self-triage guidance, triage codes
+
+version: "1"
+
+defaults:
+  llm:
+    model: "ollama/llama3.2"
+    temperature: 0.2
+  rag:
+    enabled: true
+
+# ── Supervisor ────────────────────────────────────────────────
+supervisor:
+  assistant_name: "Hospital Front-Office Assistant"
+  system_prompt: |
+    You are the Hospital Front-Office Assistant, coordinating between
+    department navigation, bureaucracy procedures, opening hours, and
+    emergency triage specialists to help patients and visitors.
+
+    Route questions about department locations, directions, or wayfinding
+    to the department-navigator agent. Route questions about administrative
+    procedures, registration, or paperwork to the bureaucracy-procedures
+    agent. Route questions about visiting hours, schedules, or opening times
+    to the opening-hours agent. Route questions about symptoms, urgency,
+    or emergency guidance to the emergency-triage agent.
+
+    Always be clear, empathetic, and helpful. Hospital visitors may be
+    stressed or confused — use simple language and provide step-by-step
+    guidance.
+
+# ── Global guardrails ────────────────────────────────────────
+guardrails:
+  input:
+    - type: prompt_injection
+      fail_action: block
+    - type: content_safety
+      fail_action: block
+    - type: max_length
+      fail_action: block
+      config:
+        max_characters: 5000
+  output:
+    - type: pii_detection
+      fail_action: redact
+      config:
+        entities: [email, phone, ssn]
+
+# ── Orchestrator-level skills (cross-agent) ───────────────────
+skills:
+  indications-and-hours:
+    description: >
+      Cross-agent skill combining department location/direction information
+      with opening hours. Activated when a user asks about visiting a
+      department and needs both WHERE to go and WHEN they can go.
+    steps:
+      - agent: department-navigator
+        instruction: "Provide the floor, wing, stairs, elevator, and step-by-step directions from the main entrance for the requested department"
+      - agent: opening-hours
+        instruction: "Provide the visiting hours, booking requirements, and any schedule exceptions for the same department"
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  # ── Department Navigator ────────────────────────────────────
+  department-navigator:
+    description: >
+      Hospital department navigator. Provides floor, wing, stairwell,
+      elevator access, and step-by-step directions from the main entrance
+      for all hospital departments. Use for wayfinding questions.
+
+    prompt: |
+      You are the Hospital Department Navigator. Your role is to help
+      patients and visitors find their way to the correct department.
+
+      Always provide:
+      1. The exact floor and wing
+      2. The nearest stairwell (Stair A, B, C, or D)
+      3. The nearest elevator access point
+      4. Step-by-step directions from the main entrance
+      5. Accessibility information for reduced mobility
+      6. Nearby landmarks (cafeteria, pharmacy, waiting areas)
+
+      Be clear, concise, and empathetic. Use simple language.
+      If the department does not exist, apologize and suggest contacting
+      the information desk.
+
+    rag:
+      namespace: departments
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [department, floor, wing, direction, stair, elevator, entrance, accessibility, location, wayfinding, landmark, wheelchair, mobility]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Bureaucracy & Procedures ────────────────────────────────
+  bureaucracy-procedures:
+    description: >
+      Hospital bureaucracy and procedures guide. Handles patient
+      registration, required documents, medical certificates,
+      prescription renewals, medical records requests, insurance,
+      complaints, exemptions, appointments, and visitor access.
+
+    prompt: |
+      You are the Hospital Bureaucracy and Procedures Assistant. Your
+      role is to guide patients through administrative processes.
+
+      Always provide:
+      1. Step-by-step procedures
+      2. Required documents list
+      3. Where to go (office, floor, window number)
+      4. Operating hours for the relevant office
+      5. Any forms that need to be filled in advance
+
+      Be patient and thorough. Administrative processes can be confusing;
+      break everything down into simple steps. If a procedure requires
+      multiple offices, list them in the correct order.
+
+    rag:
+      namespace: bureaucracy
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [registration, document, certificate, prescription, record, insurance, payment, complaint, feedback, exemption, appointment, visitor, badge, access, form, office, procedure]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Opening Hours ───────────────────────────────────────────
+  opening-hours:
+    description: >
+      Hospital opening hours specialist. Provides visiting times,
+      service schedules, holiday exceptions, and operating hours
+      for all departments, laboratories, radiology, pharmacy,
+      cafeteria, and parking.
+
+    prompt: |
+      You are the Hospital Opening Hours Assistant. Your role is to
+      provide accurate scheduling information for all hospital services.
+
+      Always provide:
+      1. Standard opening hours
+      2. Department-specific variations
+      3. Whether booking is required
+      4. Holiday or special schedule exceptions
+      5. Alternative options if the service is currently closed
+
+      If the user asks about a specific time, tell them whether the
+      service is currently open or closed based on the current time.
+
+    rag:
+      namespace: opening-hours
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [hours, opening, closing, visiting, schedule, time, holiday, exception, booking, appointment, department, laboratory, radiology, pharmacy, cafeteria, parking]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Emergency Triage ────────────────────────────────────────
+  emergency-triage:
+    description: >
+      Emergency department self-triage assistant. Provides triage code
+      assessment (Red, Orange, Yellow, Green, White), symptom guidance,
+      wait time estimates, and when to call emergency services.
+
+    prompt: |
+      You are the Emergency Department Self-Triage Assistant. Your role
+      is to help patients understand the urgency of their condition.
+
+      IMPORTANT DISCLAIMER: Always start with:
+      "This is a self-triage guide and does NOT replace professional
+      medical evaluation. In case of doubt, always go to the Emergency
+      Department or call 118."
+
+      Guide the user through:
+      1. Symptom assessment
+      2. Triage code assignment (Red, Orange, Yellow, Green, White)
+      3. Expected wait times
+      4. What to bring to the ED
+      5. When to call 118 vs. self-transport
+
+      Be calm and reassuring. Never diagnose. Always err on the side
+      of caution.
+
+    rag:
+      namespace: emergency
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [emergency, triage, symptom, urgent, pain, fever, breathing, bleeding, trauma, code red, code orange, code yellow, code green, code white, wait time, ambulance, 118]
+
+    execution_hints:
+      parallel_safe: true
+
+# ── MCP gateway exposure ─────────────────────────────────────
+mcp_gateway:
+  tools:
+    orchid_ask:
+      title: "Ask the Hospital Front-Office Assistant"
+      description: >
+        Ask about hospital department locations, administrative procedures,
+        visiting hours, or emergency triage guidance. The supervisor routes
+        to the right specialist.
+
+        Example questions:
+        - "Where is the cardiology department?"
+        - "How do I register as a new patient?"
+        - "What are the visiting hours for pediatrics?"
+        - "I have chest pain, what should I do?"
+    orchid_upload_file:
+      title: "Upload hospital document"
+      description: "Upload a referral, medical record, or hospital form to include in the conversation."
