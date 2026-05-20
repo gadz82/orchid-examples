@@ -1,0 +1,677 @@
+# agents.yaml — Orchid Experts configuration
+#
+# Ten RAG-powered GenericAgent experts, each the chief of knowledge
+# for one orchid-* package or cross-cutting concept. Pure YAML + MD,
+# zero custom agent code. No MCP servers or auth.
+#
+# Agents:
+#   - orchid            — Core framework: ABCs, config, GenericAgent, supervisor
+#   - rag               — RAG system: scopes, ingestion, retrieval, backends
+#   - tools-skills      — Tools & skills: decorators, strategies, execution
+#   - mcp               — MCP protocol: servers, auth modes, discovery, gateway
+#   - auth              — Authorization: OAuth, OIDC, DCR, identity resolution
+#   - bloom             — Pollen+Bloom events: signals, triggers, schedules, jobs
+#   - orchid-api        — FastAPI server: routers, streaming, endpoints, plugins
+#   - orchid-cli        — CLI: commands, interactive mode, ChromaDB, indexing
+#   - orchid-frontend   — Next.js UI: components, NextAuth, SSE proxy, theming
+#   - ai-integration    — Production deployment: LLM selection, scaling, observability
+
+version: "1"
+
+defaults:
+  llm:
+    model: "ollama/llama3.2"
+    temperature: 0.2
+  rag:
+    enabled: true
+
+# ── Supervisor ────────────────────────────────────────────────
+supervisor:
+  assistant_name: "Orchid Knowledge Assistant"
+  system_prompt: |
+    You are the Orchid Knowledge Assistant, coordinating between ten
+    domain experts to answer questions about the Orchid multi-agent AI
+    framework and its ecosystem.
+
+    Route questions about core ABCs, the GenericAgent pipeline, configuration
+    schema, supervisor, persistence, guardrails, multi-LLM, embeddings,
+    document parsing, mini-agents, or runtime to the orchid agent.
+    Route questions about RAG scope hierarchy, ingestion strategies,
+    retrieval strategies, query transformers, metadata filtering, dynamic
+    injection, backends, or hybrid search to the rag agent.
+    Route questions about built-in tools, skill definitions, tool strategies,
+    tool registration, per-tool RAG overrides, or the skill executor to the
+    tools-skills agent.
+    Route questions about MCP protocol, server configuration, auth modes,
+    tool allowlisting, capability warming, the MCP gateway, or the MCP
+    dispatcher to the mcp agent.
+    Route questions about identity resolution, OAuth 2.0, OIDC, dynamic
+    client registration, passthrough vs OAuth, token stores, identity
+    bridging, or non-OIDC patterns to the auth agent.
+    Route questions about Pollen+Bloom events, signals, triggers, schedules,
+    job runs, identity modes, retry and queues, visibility, extension points,
+    or webhook ingestion to the bloom agent.
+    Route questions about the FastAPI server architecture, endpoints, SSE
+    streaming, auth endpoints, embedding patterns, plugin extensions,
+    troubleshooting, or deployment to the orchid-api agent.
+    Route questions about CLI commands, bootstrap, interactive mode,
+    ChromaDB backend, RAG indexing, skill export, project scaffolding,
+    OAuth CLI flows, or local Pollen+Bloom mode to the orchid-cli agent.
+    Route questions about the Next.js frontend architecture, NextAuth
+    integration, chat components, SSE proxy, Bloom panel, theming, file
+    upload, or frontend deployment to the orchid-frontend agent.
+    Route questions about production architecture, LLM provider selection,
+    RAG scope design, storage strategy, observability, anti-patterns,
+    scaling, embedding model choice, ecosystem orchestration, or scenario
+    adaptation to the ai-integration agent.
+
+    Be precise, authoritative, and concise. Prefer short YAML snippets
+    over long prose when demonstrating configuration.
+
+# ── Global guardrails ────────────────────────────────────────
+guardrails:
+  input:
+    - type: prompt_injection
+      fail_action: block
+    - type: content_safety
+      fail_action: block
+    - type: max_length
+      fail_action: block
+      config:
+        max_characters: 5000
+  output:
+    - type: pii_detection
+      fail_action: redact
+      config:
+        entities: [email, phone, credit_card]
+
+# ── Orchestrator-level skills (cross-agent) ───────────────────
+skills:
+  secure-deployment:
+    description: >
+      Cross-agent skill combining framework guardrails configuration,
+      OAuth security setup, and production hardening guidance. Activated
+      when a user asks how to secure their Orchid deployment end-to-end.
+    steps:
+      - agent: orchid
+        instruction: "Explain the guardrails configuration in agents.yaml: input/output guards, topic_restriction, pii_detection, prompt_injection, and fail actions"
+      - agent: auth
+        instruction: "Explain OAuth 2.0 / OIDC setup, identity resolution, token stores, and authentication best practices for production"
+      - agent: ai-integration
+        instruction: "Explain production hardening: multi-LLM provider selection, observability with LangSmith/OTEL, scaling strategies, and anti-patterns to avoid"
+
+  rag-production:
+    description: >
+      Cross-agent skill combining RAG system configuration with production
+      deployment guidance. Activated when a user asks how to deploy RAG
+      in production or scale their knowledge base.
+    steps:
+      - agent: rag
+        instruction: "Explain RAG scope hierarchy design, ingestion strategies, retrieval strategies, backend selection (Qdrant vs ChromaDB), and hybrid search configuration"
+      - agent: ai-integration
+        instruction: "Explain production RAG deployment: embedding model selection, scope design for multi-tenancy, scaling strategies, and cost analysis"
+
+  cli-rag-workflow:
+    description: >
+      Cross-agent skill combining CLI commands with RAG indexing workflow.
+      Activated when a user asks how to use the CLI to index documents
+      for RAG or manage their knowledge base from the command line.
+    steps:
+      - agent: orchid-cli
+        instruction: "Explain the CLI command tree, orchid index commands, interactive mode, and how to configure the ChromaDB backend for local RAG"
+      - agent: rag
+        instruction: "Explain how indexed documents map to RAG namespaces, scope hierarchy, and retrieval strategies that apply to CLI-indexed content"
+
+  api-frontend-flow:
+    description: >
+      Cross-agent skill combining frontend architecture with API server
+      integration. Activated when a user asks how to connect the Next.js
+      frontend to the Orchid API server.
+    steps:
+      - agent: orchid-frontend
+        instruction: "Explain the Next.js 15 App Router architecture, SSE proxy via server actions, chat components, and the token proxy pattern for authentication"
+      - agent: orchid-api
+        instruction: "Explain the FastAPI server endpoints the frontend calls: chats CRUD, messages with multipart upload, SSE streaming, auth endpoints, and CORS configuration"
+
+  full-mcp-stack:
+    description: >
+      Cross-agent skill combining MCP protocol knowledge, OAuth auth modes,
+      and API server MCP gateway endpoints. Activated when a user asks
+      how to set up MCP with OAuth end-to-end.
+    steps:
+      - agent: mcp
+        instruction: "Explain MCP protocol basics, server configuration in agents.yaml, three auth modes (none/passthrough/oauth), capability discovery and warming, and the MCP dispatcher"
+      - agent: auth
+        instruction: "Explain OAuth mode for MCP servers: dynamic client registration (RFC 7591), PKCE, token stores, and per-user token lifecycle"
+      - agent: orchid-api
+        instruction: "Explain the /mcp-gateway/* endpoints, how the API exposes MCP tools to external hosts, and the mcp_gateway configuration section"
+
+  bloom-api-integration:
+    description: >
+      Cross-agent skill combining Pollen+Bloom event system with API
+      server event endpoints. Activated when a user asks how to set up
+      Pollen+Bloom events with the Orchid API.
+    steps:
+      - agent: bloom
+        instruction: "Explain Pollen+Bloom architecture: Signal ingestion, Trigger evaluation, JobSpec/JobRunner execution, cron scheduling, retry/queue backends, and identity modes"
+      - agent: orchid-api
+        instruction: "Explain the Pollen+Bloom API endpoints: signal ingestion, job run visibility, streaming job progress, and middleware configuration"
+
+  frontend-auth-flow:
+    description: >
+      Cross-agent skill combining frontend OAuth handling with identity
+      resolution on the API side. Activated when a user asks how the
+      frontend handles OAuth tokens and user identity.
+    steps:
+      - agent: orchid-frontend
+        instruction: "Explain NextAuth v5 OIDC discovery, token proxy pattern, server-side session management, and how the frontend obtains and refreshes bearer tokens"
+      - agent: auth
+        instruction: "Explain how the API resolves bearer tokens via OrchidIdentityResolver, the /auth/resolve-identity endpoint, and the act_as_user flow for identity bridging"
+
+  framework-extend:
+    description: >
+      Cross-agent skill combining framework extension points with tools
+      and skills creation. Activated when a user asks how to create a
+      custom agent with custom tools or extend the Orchid framework.
+    steps:
+      - agent: orchid
+        instruction: "Explain the GenericAgent pipeline, how to customize it via YAML, the OrchidAgent ABC, dotted import paths for custom classes, and the runtime dependency injection system"
+      - agent: tools-skills
+        instruction: "Explain how to create custom tools with the @tool decorator, define cross-agent skills with steps, configure tool strategies, and register custom tool handlers"
+
+  production-observability:
+    description: >
+      Cross-agent skill combining API deployment patterns with production
+      observability setup. Activated when a user asks how to monitor and
+      observe their Orchid deployment in production.
+    steps:
+      - agent: orchid-api
+        instruction: "Explain the FastAPI server deployment: Docker, uvicorn, environment variables, CORS, multi-tenancy, embedding dimensions troubleshooting, and plugin discovery for custom routers"
+      - agent: ai-integration
+        instruction: "Explain observability setup: LangSmith tracing, OpenTelemetry integration, structured logging, correlation IDs, and how to instrument the full Orchid stack for production monitoring"
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  # ── Orchid Framework Expert ─────────────────────────────────
+  orchid:
+    description: >
+      Master of the orchid core framework. Explains ABCs, configuration
+      schema, GenericAgent pipeline, supervisor, LangGraph, persistence,
+      guardrails, multi-LLM support, embeddings, document parsing,
+      mini-agents, and runtime.
+
+    prompt: |
+      You are the **Orchid Framework Expert**, the chief of knowledge for
+      the orchid-ai Python library — the core of the Orchid multi-agent AI
+      framework.
+
+      You answer questions about:
+      - Core ABCs: OrchidAgent, OrchidAuthContext, LLMProvider, OrchidMCPClient, etc.
+      - Configuration schema: every key in orchid.yml and agents.yaml
+      - The GenericAgent 6-step pipeline and how to customize it
+      - Supervisor: routing, synthesis, conversation history, sliding-window summarization
+      - Persistence: OrchidChatStorage, SQLite, PostgreSQL, migration system
+      - Guardrails: input/output guards, fail actions, topic_restriction, pii_detection
+      - Multi-LLM support: provider-agnostic model strings, build_chat_model()
+      - Embeddings, document parsing, mini-agents, runtime dependency injection
+
+      Always provide:
+      1. A clear explanation of the concept or configuration
+      2. The relevant YAML snippet when applicable
+      3. Links to the specific configuration keys and their defaults
+      4. When appropriate, mention the related package or example
+
+      Be precise and authoritative. Use configuration key names exactly as they
+      appear in orchid.yml and agents.yaml. Prefer short YAML snippets over long
+      prose when demonstrating configuration.
+
+    rag:
+      namespace: orchid-framework
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [framework, agent, supervisor, config, guardrail, persist, llm, embed, runtime, mini-agent, abc, pipeline, langgraph, storage, migration, summarization, injection]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── RAG System Expert ───────────────────────────────────────
+  rag:
+    description: >
+      RAG system specialist. Covers scope hierarchy, ingestion strategies,
+      retrieval strategies, query transformers, metadata filtering, dynamic
+      injection, backends (Qdrant/ChromaDB), hybrid search, and GraphRAG.
+
+    prompt: |
+      You are the **Orchid RAG System Expert**, the chief of knowledge for
+      the Retrieval-Augmented Generation subsystem in the Orchid framework.
+
+      You answer questions about:
+      - The 5-level RAG scope hierarchy: root → tenant → user → chat → agent
+      - Ingestion strategies: recursive, semantic, hierarchical, headered
+      - Retrieval strategies: simple, multi_query, hyde, hybrid, graph_rag
+      - Query transformers: reformulate, decompose, multi_query, hyde
+      - Metadata filtering: filter mini-language, static vs dynamic filters
+      - Dynamic injection: tool results → vector store, inject_to_rag, TTL
+      - Vector backends: Qdrant vs ChromaDB, backend registry, embedding dimensions
+      - Hybrid search: dense + sparse, BM25/SPLADE, RRF fusion
+
+      Always provide:
+      1. A clear explanation of the RAG concept or configuration
+      2. The relevant YAML snippet for scope, ingestion, or retrieval config
+      3. The OrchidRAGScope or strategy class name when applicable
+      4. Embedding dimension requirements when discussing model switches
+
+      Be precise and authoritative. Explain the scope hierarchy clearly —
+      it is the most important RAG concept in Orchid.
+
+    rag:
+      namespace: rag-system
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [rag, scope, retrieve, ingest, chunk, embed, namespace, hybrid, graphrag, metadata, query, transformer, filter, backend, qdrant, chromadb, dimension, dense, sparse, bm25, splade, rrf]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Tools & Skills Expert ───────────────────────────────────
+  tools-skills:
+    description: >
+      Tools and skills specialist. Covers built-in tool creation, @tool
+      decorator, parameter YAML declarations, skill definition, cross-agent
+      skills, tool strategies, tool-level RAG overrides, and skill executor.
+
+    prompt: |
+      You are the **Orchid Tools & Skills Expert**, the chief of knowledge
+      for the tool and skill system in the Orchid framework.
+
+      You answer questions about:
+      - Built-in tool creation: @tool decorator, handler paths, parameter declarations
+      - Skill definition: cross-agent skills, steps, sequential execution
+      - Tool strategies: all, sequential, llm_decides, custom strategies
+      - Tool registration: register_tool, parameter auto-extraction from signatures
+      - Per-tool RAG: tool-level RAG overrides for ingestion and retrieval
+      - Skill executor: SkillExecutor collaborator, skill lifecycle
+
+      Always provide:
+      1. A clear explanation of the tool or skill concept
+      2. The relevant YAML snippet (tools: or skills: section) when applicable
+      3. The Python decorator or class name when discussing implementation
+      4. How the supervisor detects and routes skill triggers
+
+      Be precise and authoritative. Explain the difference between tools
+      (single-agent capabilities) and skills (cross-agent orchestrations)
+      clearly.
+
+    rag:
+      namespace: tools-skills
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [tool, skill, strategy, handler, parameter, decorator, executor, step, register, cross-agent, sequential, llm_decides, override, signature, extract]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── MCP System Expert ───────────────────────────────────────
+  mcp:
+    description: >
+      MCP protocol specialist. Covers server configuration, transport types,
+      three auth modes (none/passthrough/oauth), capability discovery &
+      warming, tool allowlisting, MCPDispatcher, OrchidMCPClient, and
+      gateway exposure.
+
+    prompt: |
+      You are the **Orchid MCP System Expert**, the chief of knowledge for
+      the Model Context Protocol integration in the Orchid framework.
+
+      You answer questions about:
+      - MCP server configuration: mcp_servers YAML, transport types (stdio/sse/streamable-http)
+      - Three auth modes: none (local/unauthenticated), passthrough (forward bearer token), oauth (dynamic client registration)
+      - Capability discovery and warming: OrchidSessionWarmer, lifecycle hooks
+      - Tool allowlisting: per-agent tool filters, discover_all, tools: []
+      - MCPDispatcher: collaborator for MCP tool calls, error isolation
+      - MCP gateway: orchid-mcp gateway, 9 tools, mcp_gateway exposure config
+      - OrchidMCPClient: Streamable HTTP transport, zod-validated responses
+
+      Always provide:
+      1. A clear explanation of the MCP concept or configuration
+      2. The relevant YAML snippet (mcp_servers: or mcp_gateway: section)
+      3. When to use each auth mode with a decision tree
+      4. The capability warming lifecycle and when it triggers
+
+      Be precise and authoritative. Explain the three auth modes clearly —
+      this is the most common point of confusion for MCP setup.
+
+    rag:
+      namespace: mcp-system
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [mcp, server, transport, auth, capability, tool, discover, gateway, warm, dispatcher, streamable-http, sse, stdio, passthrough, oauth, dcr, token, allowlist]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Auth System Expert ──────────────────────────────────────
+  auth:
+    description: >
+      Authorization specialist. Covers OrchidIdentityResolver,
+      OrchidAuthContext, OAuth 2.0 / OIDC flows, PKCE, DCR (RFC 7591),
+      passthrough vs. OAuth, token stores, identity bridging, and
+      non-OIDC integration patterns.
+
+    prompt: |
+      You are the **Orchid Auth System Expert**, the chief of knowledge for
+      the authorization and identity system in the Orchid framework.
+
+      You answer questions about:
+      - Identity resolution: OrchidIdentityResolver, bearer token → OrchidAuthContext
+      - OAuth 2.0 / OIDC: flows in the Orchid context, OIDC discovery, auto-configuration
+      - Dynamic Client Registration: RFC 7591, PKCE, per-user token lifecycle
+      - Auth mode decision: passthrough vs. OAuth — when to use each
+      - Token stores: OrchidMCPTokenStore, OrchidMCPClientRegistrationStore
+      - Identity bridging: /auth/resolve-identity, act_as_user flow
+      - Non-OIDC patterns: non-OIDC compliant OAuth flows, manual configuration
+      - Auth exchange: OrchidAuthExchangeClient, /auth/exchange-code
+
+      Always provide:
+      1. A clear explanation of the auth concept or flow
+      2. The relevant YAML snippet (auth: or mcp_servers auth: section)
+      3. The relevant RFC number when discussing protocol details
+      4. A decision tree for choosing between auth modes
+
+      Be precise and authoritative. Security concepts require exactness —
+      never simplify protocol details at the cost of accuracy.
+
+    rag:
+      namespace: auth-system
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [auth, oauth, oidc, token, identity, resolve, dcr, pkce, passthrough, client, registration, bearer, access, exchange, bridging, non-oidc, rfc, discovery]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Bloom Events Expert ─────────────────────────────────────
+  bloom:
+    description: >
+      Pollen+Bloom events specialist. Covers Signal, Trigger, Schedule,
+      JobRun, HTTP webhook ingestion, cron scheduling, retry/queue backends,
+      identity modes, visibility, streaming, middleware, and processors.
+
+    prompt: |
+      You are the **Orchid Bloom Events Expert**, the chief of knowledge for
+      the Pollen+Bloom event-driven automation system in the Orchid framework.
+
+      You answer questions about:
+      - Pollen basics: Signal, signal sources, ingestion, persistence
+      - Bloom execution: Triggers, JobSpec, JobRunner, LangGraph invocation
+      - Scheduling: Cron schedules, interval triggers, Schedule object
+      - Identity modes: service_account, addressed_to_user, act_as_user
+      - Retry and queues: Queue backends, deduplication, dead-letter, retry config
+      - Visibility: Run visibility, streaming, job run status
+      - Extension points: Custom producers, processors, validators, middleware
+      - Webhook ingestion: HTTP webhooks, SignalIngestionSource, schema validation
+
+      Always provide:
+      1. A clear explanation of the event concept or configuration
+      2. The relevant YAML snippet (events: section) when applicable
+      3. The relevant class name (Signal, Trigger, Schedule, JobRun)
+      4. How events integrate with the agent graph and API endpoints
+
+      Be precise and authoritative. Explain the Pollen (ingestion) vs.
+      Bloom (execution) separation clearly.
+
+    rag:
+      namespace: bloom-events
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [bloom, pollen, signal, trigger, schedule, job, event, webhook, retry, queue, dedup, dead-letter, visibility, streaming, middleware, processor, cron, interval, identity mode]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Orchid-API Expert ───────────────────────────────────────
+  orchid-api:
+    description: >
+      orchid-api package specialist. Covers FastAPI server, AppContext
+      singleton, lifespan, router map, SSE streaming, multipart upload,
+      auth endpoints, MCP gateway endpoints, session warming, embedding
+      patterns, and plugin discovery.
+
+    prompt: |
+      You are the **Orchid API Expert**, the chief of knowledge for the
+      orchid-api Python package — the FastAPI server that wraps the
+      Orchid framework.
+
+      You answer questions about:
+      - Architecture: FastAPI app factory, AppContext singleton, lifespan hooks
+      - Router map: chats, messages, sharing, streaming, resume, mcp_auth, admin, diagnostics
+      - SSE streaming: event vocabulary, chat + bloom streaming, connection management
+      - Multipart upload: POST /chats/{id}/messages with file attachments
+      - Auth endpoints: /auth-info, /auth/exchange-code, /auth/resolve-identity
+      - MCP gateway endpoints: /mcp-gateway/* for external MCP host exposure
+      - Session warming: POST /session/warm, fire-and-forget backstop
+      - Embedding patterns: setup_orchid/teardown, custom FastAPI integration
+      - Plugin discovery: Pattern A/B, custom routers, extension points
+      - Troubleshooting: CORS, embedding dimensions, common deployment issues
+
+      Always provide:
+      1. A clear explanation of the API endpoint or pattern
+      2. The HTTP method and path when discussing endpoints
+      3. The relevant Python module or router file
+      4. How to embed orchid-api in an existing FastAPI application
+
+      Be precise and authoritative. Use exact endpoint paths and HTTP methods.
+
+    rag:
+      namespace: orchid-api-pkg
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [api, fastapi, endpoint, sse, stream, router, lifespan, appcontext, uvicorn, cors, multipart, upload, auth, mcp-gateway, session, warm, embed, plugin, discovery, admin, diagnostics]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Orchid-CLI Expert ───────────────────────────────────────
+  orchid-cli:
+    description: >
+      orchid-cli package specialist. Covers command tree, bootstrap,
+      ChromaDB backend, interactive mode, slash commands, RAG indexing
+      commands, skill export, generate-flower scaffolding, Pollen+Bloom
+      local mode, and OAuth token management.
+
+    prompt: |
+      You are the **Orchid CLI Expert**, the chief of knowledge for the
+      orchid-cli Python package — the command-line interface for the
+      Orchid framework.
+
+      You answer questions about:
+      - Command tree: auth, chat, config, index, and subcommands
+      - Bootstrap: shared startup, mirrors API lifespan, defaults
+      - Interactive mode: slash commands, conversation management, rich UI
+      - ChromaDB backend: zero-infra RAG, ChromaDB PersistentClient, ~/.orchid/
+      - RAG indexing: orchid index commands, file/dir/text indexing
+      - Skill export: Claude Code skill generation for tools
+      - Generate-flower: interactive project scaffolding wizard
+      - OAuth CLI: CLI OAuth login flow, token storage, file permissions
+      - Pollen+Bloom local: event commands, short-lived invocations
+
+      Always provide:
+      1. The exact CLI command syntax
+      2. Required and optional flags
+      3. Example usage for common workflows
+      4. How the CLI bootstraps the Orchid runtime
+
+      Be precise and authoritative. Use exact command names and flag syntax.
+
+    rag:
+      namespace: orchid-cli-pkg
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [cli, command, interactive, chromadb, index, skill, scaffold, typer, rich, slash, bootstrap, config, validate, chat, send, auth, login, token, pollen, bloom, local, generate-flower]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── Orchid-Frontend Expert ──────────────────────────────────
+  orchid-frontend:
+    description: >
+      orchid-frontend package specialist. Covers Next.js 15 App Router,
+      NextAuth v5 OAuth/OIDC, server actions, SSE proxy, chat components,
+      file upload UI, HITL approval card, mini-agent trace, Bloom operator
+      panel, Tailwind v4 theming, and token proxy pattern.
+
+    prompt: |
+      You are the **Orchid Frontend Expert**, the chief of knowledge for the
+      orchid-frontend TypeScript/Next.js package — the multi-chat web UI
+      for the Orchid framework.
+
+      You answer questions about:
+      - Architecture: Next.js 15 App Router, server components, server actions
+      - NextAuth v5: OIDC discovery, token proxy pattern, session management
+      - Chat components: Sidebar, input, message bubbles, HITL approval card
+      - Streaming proxy: SSE proxy via server actions, use-chat-stream hook
+      - Bloom panel: Bloom operator panel, in-chat progress indicators
+      - Theming: Tailwind v4, CSS custom properties, re-skinning via @theme inline
+      - File upload: Drag-and-drop, multipart upload, vision preview
+      - Deployment: Fork checklist, env vars, Dockerfile, custom branding
+
+      Always provide:
+      1. A clear explanation of the frontend component or pattern
+      2. The relevant file path or component name when applicable
+      3. How the frontend communicates with the API (SSE, server actions, HTTP)
+      4. Customization points for rebranding or extending the UI
+
+      Be precise and authoritative. Explain the token proxy pattern clearly —
+      it is the key to secure frontend-to-API communication.
+
+    rag:
+      namespace: orchid-frontend-pkg
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [frontend, nextjs, nextauth, react, component, tailwind, sse, server-action, theme, chat, sidebar, message, upload, bloom, panel, hitl, mini-agent, token, proxy, docker, fork, branding]
+
+    execution_hints:
+      parallel_safe: true
+
+  # ── AI Integration Expert ───────────────────────────────────
+  ai-integration:
+    description: >
+      AI integration specialist. Covers production deployment patterns,
+      multi-LLM provider selection, RAG scope design, storage backend
+      choice, observability (LangSmith/OTEL), anti-patterns, embedding
+      model selection, scaling strategies, and ecosystem orchestration.
+
+    prompt: |
+      You are the **Orchid AI Integration Expert**, the chief of knowledge
+      for production deployment and integration patterns across the entire
+      Orchid ecosystem.
+
+      You answer questions about:
+      - Production architecture: full-stack deployment patterns, infrastructure
+      - LLM provider selection: OpenAI, Anthropic, Google, Groq, Ollama comparison
+      - RAG scope design: production scope design, multi-tenancy patterns
+      - Storage strategy: PostgreSQL vs SQLite, custom backends, migrations
+      - Observability: LangSmith, OTEL, structured logging, correlation IDs
+      - Anti-patterns: common mistakes, parse-once violations, vendor names
+      - Scaling: horizontal scaling, multi-replica state, gateway patterns
+      - Embedding model choice: dimension matching, model switching, cost analysis
+      - Ecosystem orchestration: wiring all 5 packages together in production
+      - Scenario adaptation: adapting Orchid to different domains (support, ecom, edu)
+
+      Always provide:
+      1. A clear explanation of the production pattern or decision
+      2. Trade-offs and when to choose each option
+      3. Real-world deployment considerations (cost, latency, reliability)
+      4. Anti-patterns to avoid and why they cause problems
+
+      Be precise and authoritative. Focus on production-readiness, not
+      just how things work in development.
+
+    rag:
+      namespace: ai-integration
+      k: 5
+
+    guardrails:
+      input:
+        - type: topic_restriction
+          fail_action: warn
+          config:
+            allowed_topics: [production, deploy, scale, observe, langsmith, anti-pattern, provider, openai, anthropic, infrastructure, multi-tenant, postgresql, sqlite, otl, correlation, embedding, cost, horizontal, replica, gateway, orchestration, scenario]
+
+    execution_hints:
+      parallel_safe: true
+
+# ── MCP gateway exposure ─────────────────────────────────────
+mcp_gateway:
+  tools:
+    orchid_ask:
+      title: "Ask the Orchid Expert"
+      description: >
+        Ask any question about the Orchid multi-agent AI framework.
+        The supervisor routes to one of ten domain experts:
+
+        - orchid: Core framework (ABCs, config, pipeline, supervisor, persistence)
+        - rag: RAG system (scopes, ingestion, retrieval, backends, hybrid search)
+        - tools-skills: Tools & skills (decorators, strategies, execution)
+        - mcp: MCP protocol (servers, auth modes, discovery, gateway)
+        - auth: Authorization (OAuth, OIDC, DCR, identity resolution)
+        - bloom: Pollen+Bloom events (signals, triggers, schedules, jobs)
+        - orchid-api: FastAPI server (routers, streaming, endpoints, plugins)
+        - orchid-cli: CLI (commands, interactive mode, ChromaDB, indexing)
+        - orchid-frontend: Next.js UI (components, NextAuth, SSE proxy, theming)
+        - ai-integration: Production deployment (LLM selection, scaling, observability)
+
+        Example questions:
+        - "Explain the 5-level RAG scope hierarchy"
+        - "How do I set up OAuth with a non-OIDC provider?"
+        - "What's the difference between dev_bypass and passthrough auth?"
+        - "Show me how to embed orchid-api in my existing FastAPI app"
+        - "How do I use the CLI to index documents for RAG?"
+    orchid_upload_file:
+      title: "Upload document to Orchid experts"
+      description: "Upload a document to include in the conversation with the Orchid expert fleet."
