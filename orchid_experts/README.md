@@ -22,6 +22,7 @@ A self-contained demo deploying a **fleet of ten RAG-powered expert agents**, ea
 | Guardrails | Global + per-agent topic_restriction |
 | MCP servers | None (pure RAG example) |
 | Auth | Trivial any-bearer resolver |
+| Config storage | Supported (commented out in `orchid.yml`) |
 
 ## Prerequisites
 
@@ -62,7 +63,7 @@ orchid chat interactive \
 ```
 examples/orchid_experts/
 ├── __init__.py
-├── orchid.yml                    # Runtime config (Qdrant, SQLite, Ollama)
+├── orchid.yml                    # Runtime config (Qdrant, SQLite, Ollama, config_storage)
 ├── agents.yaml                   # 10 agents + supervisor + skills + guardrails
 ├── identity.py                   # ExpertsIdentityResolver
 ├── hooks/
