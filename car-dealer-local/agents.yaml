@@ -1,0 +1,102 @@
+# agents.yaml — Car Dealer agent with content-source tools
+#
+# One agent (car-dealer) that uses three built-in content tools to
+# search and read technical specification documents from the configured
+# content sources.
+#
+# Usage:
+#   orchid chat interactive --config examples/car-dealer-local/orchid.yml
+
+version: "1"
+
+defaults:
+  llm:
+    model: ollama/llama3.2
+    temperature: 0.2
+  rag:
+    enabled: false
+
+tools:
+  list_content_files:
+    handler: orchid_ai.agents.content_tools.list_content_files
+    description: >
+      List available files in configured content directories.
+      Use this to discover what car specification documents are available.
+    parameters:
+      path:
+        type: string
+        description: Subdirectory path to list (empty = root)
+        required: false
+        default: ""
+      recursive:
+        type: boolean
+        description: Include files in subdirectories
+        required: false
+        default: false
+      limit:
+        type: integer
+        description: Maximum number of results to return
+        required: false
+        default: 100
+
+  search_content_files:
+    handler: orchid_ai.agents.content_tools.search_content_files
+    description: >
+      Search for car specification files by name.
+      Use this when the user asks about a specific car model or feature.
+    parameters:
+      query:
+        type: string
+        description: Search query (car model name, part name, spec keyword)
+        required: true
+      recursive:
+        type: boolean
+        description: Search in subdirectories too
+        required: false
+        default: true
+      limit:
+        type: integer
+        description: Maximum number of results to return
+        required: false
+        default: 10
+
+  read_content_file:
+    handler: orchid_ai.agents.content_tools.read_content_file
+    description: >
+      Read the full content of a specific file from configured content directories.
+      Use this to get detailed specifications after discovering a file.
+    parameters:
+      path:
+        type: string
+        description: File path relative to the content source root
+        required: true
+      source:
+        type: string
+        description: Source name to restrict search to (empty = search all sources)
+        required: false
+        default: ""
+
+agents:
+  car-dealer:
+    description: >
+      Automotive sales and technical expert.  Answers customer questions about
+      car specifications using the available technical document library.
+    prompt: |
+      You are a knowledgeable car dealer assistant helping customers find the
+      right vehicle.  You have access to a library of car specification documents.
+
+      IMPORTANT RULES:
+      1. When a customer asks about a car model, FIRST use search_content_files to find relevant specification documents.
+      2. After finding documents, use read_content_file to retrieve the detailed specifications.
+      3. Use the retrieved specifications to answer the customer's question accurately.
+      4. Always cite which document you found the information in.
+      5. If no document is found for a model, suggest similar models from the available files.
+      6. When listing options, ALWAYS use list_content_files to discover what's available.
+
+      Be accurate, cite your sources, and help the customer compare options.
+    tools:
+      - list_content_files
+      - search_content_files
+      - read_content_file
+    execution_hints:
+      parallel_safe: true

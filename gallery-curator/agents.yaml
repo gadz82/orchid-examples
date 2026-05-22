@@ -1,0 +1,124 @@
+# agents.yaml — Gallery Curator demo configuration
+#
+# A single GenericAgent backed by the full conversation summarization pipeline:
+#   running_summary + structured_output + rag_augmented + middle truncation
+#
+# Activate:
+#   AGENTS_CONFIG_PATH=examples/gallery-curator/agents.yaml
+
+version: "1"
+
+defaults:
+  llm:
+    model: "ollama/llama3.2"
+    temperature: 0.2
+  rag:
+    enabled: false
+
+# ── Global guardrails ────────────────────────────────────────
+guardrails:
+  input:
+    - type: prompt_injection
+      fail_action: block
+    - type: max_length
+      fail_action: block
+      config:
+        max_characters: 5000
+
+# ── Supervisor — full conversation memory pipeline ────────────
+
+supervisor:
+  assistant_name: "Gallery Curator"
+  history_max_turns: 30
+  history_max_chars: 1200
+  history_summary_enabled: true
+  history_summary_model: ollama/llama3.2
+  history_summary_recent_turns: 8
+  skip_synthesis_when_single_agent: true
+
+  # ── Conversation memory (Phases 1–4) ───────────────────
+  memory:
+    strategy: "running_summary"
+    # Use "rag_augmented" when Qdrant is available — semantically retrieves
+    # the 5 most relevant past turns on each query.  Degrades gracefully
+    # to running_summary-only when Qdrant is down (NullVectorReader).
+    summary_recent_turns: 8
+    summary_model: ollama/llama3.2
+    structured_output: true
+    persist_summary: true
+    summary_prompt: null
+    # -- RAG memory (active when strategy=rag_augmented) --
+    rag_k: 5
+    rag_similarity_threshold: 0.5
+    store_turns: true
+    # -- Truncation (Phase 4) --
+    truncation_strategy: "middle"
+    truncation_max_chars: 800
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  gallery-curator:
+    description: >
+      Art gallery curator assistant. Helps plan exhibitions, research artists,
+      track auction results, manage shipping logistics, and record curatorial
+      decisions. Remembers context across sessions via conversation memory
+      (running summaries + structured entity extraction + RAG retrieval).
+
+    prompt: >
+      You are an experienced art gallery curator assistant. You help gallery
+      directors plan exhibitions, research artists, track auction results,
+      manage shipping logistics, and record curatorial decisions.
+
+      When answering, be concise and factual. Use your knowledge of the art
+      world — contemporary art, post-war abstract, installation art, biennales,
+      major auction houses, and gallery operations.
+
+      IMPORTANT: The conversation history contains a structured summary of all
+      past discussions, including tracked entities (artists, venues, exhibitions,
+      artworks) and decisions you've made together. Use this context to avoid
+      re-asking for information already provided in this session.
+
+      When discussing artists, always note their primary medium, period,
+      and recent exhibition or auction highlights if known.
+
+    llm:
+      model: ollama/llama3.2
+      temperature: 0.2
+
+    rag:
+      enabled: true
+      namespace: gallery-catalog
+      k: 5
+
+    # Per-agent prompt overrides — customise compression behaviour
+    prompt_sections:
+      summary_compression_system_prompt: >
+        You are a gallery curator conversation summarizer. Extract structured
+        information from exhibition planning discussions. Focus on: artist names
+        and mediums, artwork details, auction prices, exhibition dates, venue
+        logistics, and curatorial decisions. Output ONLY valid JSON.
+
+      summary_compression_user_prompt: >
+        Summarise the following gallery planning conversation in structured JSON
+        format. Track: (1) artists mentioned and their availability, (2) exhibition
+        dates and venues, (3) budget figures and auction results, (4) decisions
+        made (confirmed/rejected/deferred), (5) open logistics questions, and
+        (6) the curator's stated preferences or constraints.
+
+        {transcript}
+
+      summary_extension_system_prompt: >
+        You have an existing gallery conversation summary and new messages to
+        incorporate. Update the summary to reflect new exhibition plans, artist
+        confirmations, budget changes, and shipping decisions. Remove contradicted
+        facts and merge duplicate artist/venue entities. Output ONLY valid JSON.
+
+      summary_extension_user_prompt: >
+        Given the existing summary below and the new gallery planning messages,
+        produce an updated summary that incorporates all new information.
+
+        Existing summary:
+        {existing_summary}
+
+        New messages:
+        {new_messages}

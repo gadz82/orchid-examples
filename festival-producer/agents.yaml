@@ -1,0 +1,358 @@
+# agents.yaml — Festival Producer demo configuration
+#
+# Three GenericAgents (artist-booking, logistics, marketing) with
+# cross-agent orchestrator skills and rag_augmented conversation memory.
+#
+# Activate:
+#   AGENTS_CONFIG_PATH=examples/festival-producer/agents.yaml
+
+version: "1"
+
+defaults:
+  llm:
+    model: "ollama/llama3.2"
+    temperature: 0.2
+  rag:
+    enabled: false
+
+# ── Global guardrails ────────────────────────────────────────
+guardrails:
+  input:
+    - type: prompt_injection
+      fail_action: block
+    - type: max_length
+      fail_action: block
+      config:
+        max_characters: 8000
+
+# ── Supervisor — rag_augmented conversation memory ──────────
+
+supervisor:
+  assistant_name: "Festival Producer"
+  history_max_turns: 40
+  history_max_chars: 1500
+  history_summary_enabled: true
+  history_summary_model: ollama/llama3.2
+  history_summary_recent_turns: 12
+  skip_synthesis_when_single_agent: true
+
+  memory:
+    strategy: "rag_augmented"
+    summary_recent_turns: 12
+    summary_model: ollama/llama3.2
+    structured_output: true
+    persist_summary: true
+    summary_prompt: null
+    rag_k: 5
+    rag_similarity_threshold: 0.5
+    store_turns: true
+    truncation_strategy: "middle"
+    truncation_max_chars: 1000
+
+# ── Built-in tools ──────────────────────────────────────────
+tools:
+  # Artist booking tools
+  lookup_artist:
+    handler: "examples.festival_producer.tools.booking.lookup_artist"
+    description: "Look up an artist by name: genre, fee, availability, rider requirements"
+    parameters:
+      artist_name:
+        type: string
+        description: "Artist name (e.g. 'The Midnight Vibrations')"
+        required: false
+        default: ""
+  list_available_artists:
+    handler: "examples.festival_producer.tools.booking.list_available_artists"
+    description: "List artists available for a given quarter, optionally filtered by max fee"
+    parameters:
+      quarter:
+        type: string
+        description: "Quarter to filter (e.g. 'Q2 2027')"
+        required: false
+        default: ""
+      max_fee:
+        type: integer
+        description: "Maximum fee in USD"
+        required: false
+        default: 150000
+  get_rider_details:
+    handler: "examples.festival_producer.tools.booking.get_rider_details"
+    description: "Get technical rider: stage preference, power requirements, backstage needs"
+    parameters:
+      artist_name:
+        type: string
+        description: "Artist name"
+        required: false
+        default: ""
+  compare_artists:
+    handler: "examples.festival_producer.tools.booking.compare_artists"
+    description: "Compare two artists side-by-side: fee, draw, genre"
+    parameters:
+      artist_a:
+        type: string
+        description: "First artist name"
+        required: false
+        default: ""
+      artist_b:
+        type: string
+        description: "Second artist name"
+        required: false
+        default: ""
+
+  # Logistics tools
+  check_venue_availability:
+    handler: "examples.festival_producer.tools.logistics.check_venue_availability"
+    description: "Check venue availability: capacity, open slots, power grid specs"
+    parameters:
+      stage_name:
+        type: string
+        description: "Stage name (e.g. 'main stage')"
+        required: false
+        default: ""
+  get_schedule_overview:
+    handler: "examples.festival_producer.tools.logistics.get_schedule_overview"
+    description: "Get full schedule overview: confirmed bookings and open slots across all stages"
+  estimate_power_budget:
+    handler: "examples.festival_producer.tools.logistics.estimate_power_budget"
+    description: "Estimate power budget for a stage based on confirmed artists"
+    parameters:
+      stage_name:
+        type: string
+        description: "Stage name"
+        required: false
+        default: ""
+  get_crew_requirements:
+    handler: "examples.festival_producer.tools.logistics.get_crew_requirements"
+    description: "Estimate crew needs: sound engineers, lighting techs, security, medical"
+    parameters:
+      stage_count:
+        type: integer
+        description: "Number of active stages"
+        required: false
+        default: 0
+
+  # Marketing tools
+  analyze_demographics:
+    handler: "examples.festival_producer.tools.marketing.analyze_demographics"
+    description: "Analyze target demographics for a music genre"
+    parameters:
+      genre:
+        type: string
+        description: "Music genre (e.g. 'indie rock')"
+        required: false
+        default: ""
+  get_pricing_strategy:
+    handler: "examples.festival_producer.tools.marketing.get_pricing_strategy"
+    description: "Get pricing strategy: early bird, general, late, VIP tiers with revenue projections"
+    parameters:
+      estimated_attendance:
+        type: integer
+        description: "Estimated total attendance"
+        required: false
+        default: 15000
+  recommend_channels:
+    handler: "examples.festival_producer.tools.marketing.recommend_channels"
+    description: "Recommend marketing channels based on lineup genres and budget"
+    parameters:
+      genres:
+        type: string
+        description: "Comma-separated genres (e.g. 'indie rock,electronic')"
+        required: false
+        default: ""
+      budget:
+        type: integer
+        description: "Marketing budget in USD"
+        required: false
+        default: 50000
+  project_attendance:
+    handler: "examples.festival_producer.tools.marketing.project_attendance"
+    description: "Project attendance based on lineup size and average artist draw"
+    parameters:
+      lineup_size:
+        type: integer
+        description: "Number of artists on the lineup"
+        required: false
+        default: 10
+      avg_draw:
+        type: integer
+        description: "Average attendance draw per artist"
+        required: false
+        default: 12000
+
+# ── Orchestrator-level skills (cross-agent) ───────────────────
+skills:
+  full_production_review:
+    description: >
+      Complete end-to-end production review: verify artist availability and
+      rider requirements, check venue logistics and power budget,
+      then analyze target demographics and recommend marketing channels.
+    steps:
+      - agent: artist-booking
+        instruction: "Look up the mentioned artist(s): availability, fee, rider requirements"
+      - agent: logistics
+        instruction: "Based on the artist riders, check venue availability and estimate power and crew requirements"
+      - agent: marketing
+        instruction: "Based on the genre lineup, analyze demographics, project attendance, and recommend marketing channels"
+
+  budget_optimization:
+    description: >
+      Cross-reference artist fees with projected ticket revenue and
+      marketing spend to recommend budget optimizations.
+    steps:
+      - agent: artist-booking
+        instruction: "List available artists filtered by the budget constraints. Compare top candidates on fee vs draw."
+      - agent: marketing
+        instruction: "Project attendance and revenue based on the proposed lineup. Compare ticket tiers."
+
+  stage_planning:
+    description: >
+      Match confirmed artists to appropriate stages, verify power
+      requirements, and flag scheduling conflicts.
+    steps:
+      - agent: artist-booking
+        instruction: "Get rider details for all confirmed artists"
+      - agent: logistics
+        instruction: "Check venue availability for the preferred stages. Estimate power budget and flag any conflicts"
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  artist-booking:
+    description: >
+      Festival artist booking agent. Knows artist availability windows,
+      typical fees, genre classification, attendance draw, rider
+      requirements, and tour schedules. Use for any question about
+      artist selection, fee negotiation, or lineup curation.
+
+    prompt: >
+      You are an experienced festival artist booker. You manage artist
+      relationships, negotiate fees, and curate lineups for a mid-size
+      music festival (15K-20K attendees, 5 stages).
+
+      When recommending artists, consider: genre balance across stages,
+      fee vs attendance draw ratio, rider complexity, and availability
+      windows. Always check rider requirements when proposing a stage
+      assignment — a Main Stage act cannot play an Acoustic Garden set.
+
+      The conversation history contains a structured summary of all past
+      booking discussions including confirmed artists, budget constraints,
+      and lineup decisions. Use this context.
+
+    llm:
+      model: ollama/llama3.2
+      temperature: 0.2
+
+    tools:
+      - lookup_artist
+      - list_available_artists
+      - get_rider_details
+      - compare_artists
+
+    prompt_sections:
+      summary_compression_system_prompt: >
+        You are a festival booking conversation summarizer. Extract structured
+        information from artist booking discussions. Focus on: artist names and
+        genres, fee negotiations, availability windows, rider requirements,
+        and lineup curation decisions. Output ONLY valid JSON.
+
+      summary_compression_user_prompt: >
+        Summarise the following festival booking conversation in structured JSON.
+        Track: (1) artists discussed with fees and availability, (2) genre
+        classifications, (3) rider and stage compatibility, (4) confirmed or
+        rejected bookings, (5) budget considerations.
+
+        {transcript}
+
+
+  logistics:
+    description: >
+      Festival logistics agent. Knows venue capacities, stage dimensions,
+      power grid specs, scheduling, crew requirements, and sound/lighting
+      setups. Use for any question about venue logistics, scheduling
+      conflicts, or production planning.
+
+    prompt: >
+      You are a festival production manager. You manage venue logistics,
+      stage scheduling, power distribution, crew assignments, and
+      backstage operations for a mid-size music festival.
+
+      When evaluating stage assignments, verify: power grid compatibility
+      with artist rider requirements, stage dimensions vs production needs,
+      schedule density (avoid back-to-back complex changeovers), and
+      backstage capacity (dressing rooms, catering scale).
+
+      The conversation history contains a structured summary of logistics
+      decisions and venue configurations. Use it to avoid re-checking
+      already-verified constraints.
+
+    llm:
+      model: ollama/llama3.2
+      temperature: 0.2
+
+    tools:
+      - check_venue_availability
+      - get_schedule_overview
+      - estimate_power_budget
+      - get_crew_requirements
+
+    prompt_sections:
+      summary_compression_system_prompt: >
+        You are a festival logistics conversation summarizer. Extract structured
+        information from production planning discussions. Focus on: venue
+        configurations, power budgets, stage assignments, crew requirements,
+        scheduling decisions, and equipment specs. Output ONLY valid JSON.
+
+      summary_compression_user_prompt: >
+        Summarise the following logistics conversation in structured JSON.
+        Track: (1) stage assignments and capacities, (2) power grid usage
+        and constraints, (3) crew allocations, (4) scheduling decisions
+        and conflicts, (5) equipment and backstage requirements.
+
+        {transcript}
+
+
+  marketing:
+    description: >
+      Festival marketing agent. Knows demographics by genre, ticket
+      pricing strategies, marketing channel effectiveness (social,
+      radio, influencer), and attendance projection models. Use for
+      any question about promotion, ticket sales, or audience analysis.
+
+    prompt: >
+      You are a festival marketing director. You plan promotional
+      campaigns, set ticket pricing tiers, analyze audience demographics,
+      and allocate marketing budgets across channels.
+
+      When projecting attendance, factor in: lineup genre diversity,
+      headliner draw, regional competition, and historical weather
+      patterns. For pricing, consider the demographic price sensitivity
+      of the primary genres in the lineup.
+
+      The conversation history contains structured summaries of past
+      marketing decisions and audience analyses. Use this context to
+      build on prior strategies rather than starting from scratch.
+
+    llm:
+      model: ollama/llama3.2
+      temperature: 0.2
+
+    tools:
+      - analyze_demographics
+      - get_pricing_strategy
+      - recommend_channels
+      - project_attendance
+
+    prompt_sections:
+      summary_compression_system_prompt: >
+        You are a festival marketing conversation summarizer. Extract structured
+        information from promotional planning discussions. Focus on: target
+        demographics by genre, ticket pricing strategies, channel allocations,
+        budget decisions, and attendance projections. Output ONLY valid JSON.
+
+      summary_compression_user_prompt: >
+        Summarise the following marketing conversation in structured JSON.
+        Track: (1) genre-specific demographics and targeting, (2) ticket tier
+        pricing and projected revenue, (3) marketing channel recommendations
+        and budgets, (4) attendance projections and assumptions, (5) campaign
+        timeline and launch decisions.
+
+        {transcript}

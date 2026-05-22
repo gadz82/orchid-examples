@@ -1,0 +1,39 @@
+# agents.yaml — Car Dealer Expert Fleet
+#
+# This file does NOT define agents.  All agents are created dynamically
+# by the startup hook (hooks/startup.py) which:
+#
+#   1. Reads car specification documents from configured content sources
+#      using a Python-coded ContentReader (not a YAML agent).
+#   2. Analyses document content using a Python-coded ContentSummariser
+#      (not a YAML agent) to identify specialisation topics.
+#   3. Generates OrchidAgentConfig entries and persists them in SQLite
+#      via the agent_configs table.
+#
+# The config_storage block tells Orchid to merge SQLite-stored agent
+# configs into the graph at bootstrap time.  Since merge_from_db() runs
+# AFTER the startup hook, the fleet is ready on first boot.
+#
+# After bootstrap the graph contains:
+#   toyota-expert   — specialist in Toyota Camry specs
+#   ford-expert     — specialist in Ford F-150 specs
+#   vw-expert       — specialist in Volkswagen Golf specs
+#
+# Usage:
+#   orchid chat interactive --config examples/car_dealer_fleet/orchid.yml
+
+version: "1"
+
+defaults:
+  llm:
+    model: ollama/llama3.2
+    temperature: 0.2
+  rag:
+    enabled: false
+
+config_storage:
+  enabled: true
+  class: orchid_ai.persistence.config_sqlite.OrchidSQLiteConfigStorage
+  dsn: ~/.orchid/car-dealer-fleet.db
+
+agents: {}
