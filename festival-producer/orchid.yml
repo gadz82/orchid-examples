@@ -1,0 +1,38 @@
+# orchid.yml — Festival Producer demo configuration
+#
+# Multi-agent festival planning: artist booking, stage logistics,
+# and marketing. Backed by rag_augmented conversation memory with
+# structured JSON entity extraction and SQLite persistence.
+#
+# Usage:
+#   ORCHID_CONFIG=examples/festival-producer/orchid.yml uvicorn orchid_api.main:app
+#   orchid chat interactive --config examples/festival-producer/orchid.yml
+
+agents:
+  config_path: examples/festival-producer/agents.yaml
+
+llm:
+  model: ollama/llama3.2
+  ollama_api_base: http://host.docker.internal:11434
+
+auth:
+  dev_bypass: true
+
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  embedding_model: ollama/nomic-embed-text
+
+upload:
+  vision_model: ollama/minicpm-v
+  namespace: uploads
+  max_size_mb: 20
+  chunk_size: 1000
+  chunk_overlap: 200
+
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: /data/chats.db
+
+tracing:
+  langsmith_tracing: false

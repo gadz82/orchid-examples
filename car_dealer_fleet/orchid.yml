@@ -1,0 +1,52 @@
+# orchid.yml — Car Dealer Expert Fleet with dynamic agent creation
+#
+# Demonstrates content-source-driven agent fleet generation:
+#   Content sources → ContentReader → ContentSummariser → SQLite agent_configs
+#   → merge_from_db() → compiled graph with specialised experts.
+#
+# Usage:
+#
+#   pip install -e ../orchid -e ../orchid-cli
+#
+#   # First run — the startup hook builds the fleet from scratch
+#   orchid chat interactive --config examples/car_dealer_fleet/orchid.yml
+#
+#   # The supervisor now routes to toyota-expert, ford-expert, vw-expert
+#   > What's the fuel economy of the Toyota Camry?
+#   > Compare the F-150 and the Golf.
+#
+#   # To rebuild the fleet (e.g. after adding new documents):
+#   rm ~/.orchid/car-dealer-fleet.db
+#   orchid chat interactive --config examples/car_dealer_fleet/orchid.yml
+
+agents:
+  config_path: examples/car_dealer_fleet/agents.yaml
+
+llm:
+  model: ollama/llama3.2
+  ollama_api_base: http://host.docker.internal:11434
+
+auth:
+  dev_bypass: true
+
+rag:
+  enabled: false
+
+# Content sources — car specification documents
+content_sources:
+  - path: examples/car_dealer_fleet/data
+    source: local
+    file_extensions: [.md, .txt]
+    metadata:
+      category: car-specs
+
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: ~/.orchid/car-dealer-fleet.db
+
+# Startup hook — builds the expert fleet from content sources
+startup:
+  hook: examples.car_dealer_fleet.hooks.startup.build_expert_fleet
+
+tracing:
+  langsmith_tracing: false

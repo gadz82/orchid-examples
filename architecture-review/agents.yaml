@@ -1,0 +1,385 @@
+# agents.yaml — Architecture Review Board demo
+#
+# Three GenericAgents (structural, cost, sustainability) with
+# cross-agent orchestrator skills and rag_augmented memory.
+#
+# Activate:
+#   AGENTS_CONFIG_PATH=examples/architecture-review/agents.yaml
+
+version: "1"
+
+defaults:
+  llm:
+    model: "ollama/llama3.2"
+    temperature: 0.2
+  rag:
+    enabled: false
+
+guardrails:
+  input:
+    - type: prompt_injection
+      fail_action: block
+    - type: max_length
+      fail_action: block
+      config:
+        max_characters: 8000
+
+supervisor:
+  assistant_name: "Architecture Review Board"
+  history_max_turns: 35
+  history_max_chars: 1200
+  history_summary_enabled: true
+  history_summary_model: ollama/llama3.2
+  history_summary_recent_turns: 10
+  skip_synthesis_when_single_agent: true
+
+  memory:
+    strategy: "rag_augmented"
+    summary_recent_turns: 10
+    summary_model: ollama/llama3.2
+    structured_output: true
+    persist_summary: true
+    summary_prompt: null
+    rag_k: 6
+    rag_similarity_threshold: 0.45
+    store_turns: true
+    truncation_strategy: "middle"
+    truncation_max_chars: 900
+
+# ── Built-in tools ──────────────────────────────────────────
+tools:
+  # Structural tools
+  analyze_structure:
+    handler: "examples.architecture_review.tools.structural.analyze_structure"
+    description: "Analyze structural requirements: load estimates, recommended systems, span limits"
+    parameters:
+      building_type:
+        type: string
+        description: "Building type (e.g. 'office')"
+        required: false
+        default: ""
+      floors:
+        type: integer
+        description: "Number of floors"
+        required: false
+        default: 0
+      area_m2:
+        type: integer
+        description: "Gross floor area in m²"
+        required: false
+        default: 0
+  check_code_compliance:
+    handler: "examples.architecture_review.tools.structural.check_code_compliance"
+    description: "Check building code compliance for a jurisdiction and material"
+    parameters:
+      jurisdiction:
+        type: string
+        description: "Jurisdiction (e.g. 'EU', 'US', 'UK')"
+        required: false
+        default: ""
+      material:
+        type: string
+        description: "Primary structural material"
+        required: false
+        default: ""
+  compare_materials:
+    handler: "examples.architecture_review.tools.structural.compare_materials"
+    description: "Compare two structural materials: strength, carbon, cost, fire rating"
+    parameters:
+      material_a:
+        type: string
+        description: "First material"
+        required: false
+        default: ""
+      material_b:
+        type: string
+        description: "Second material"
+        required: false
+        default: ""
+  get_fire_strategy:
+    handler: "examples.architecture_review.tools.structural.get_fire_strategy"
+    description: "Get fire safety strategy: intrinsic rating, protection, evacuation"
+    parameters:
+      material:
+        type: string
+        description: "Structural material"
+        required: false
+        default: ""
+      floors:
+        type: integer
+        description: "Number of floors"
+        required: false
+        default: 0
+
+  # Cost tools
+  estimate_construction_cost:
+    handler: "examples.architecture_review.tools.cost.estimate_construction_cost"
+    description: "Estimate construction cost by building type, area, and quality tier"
+    parameters:
+      building_type:
+        type: string
+        description: "Building type"
+        required: false
+        default: ""
+      area_m2:
+        type: integer
+        description: "Gross floor area in m²"
+        required: false
+        default: 0
+      quality:
+        type: string
+        description: "Quality tier: low, medium, high"
+        required: false
+        default: "medium"
+  compare_lifecycle_costs:
+    handler: "examples.architecture_review.tools.cost.compare_lifecycle_costs"
+    description: "Compare lifecycle costs: initial, maintenance, 30-year total"
+    parameters:
+      material:
+        type: string
+        description: "Structural material"
+        required: false
+        default: ""
+      area_m2:
+        type: integer
+        description: "Area in m²"
+        required: false
+        default: 0
+  get_market_rates:
+    handler: "examples.architecture_review.tools.cost.get_market_rates"
+    description: "Get regional market rates: labour, materials, planning timeline"
+    parameters:
+      region:
+        type: string
+        description: "City or region"
+        required: false
+        default: ""
+
+  # Sustainability tools
+  evaluate_certification:
+    handler: "examples.architecture_review.tools.sustainability.evaluate_certification"
+    description: "Evaluate sustainability certification: BREEAM, LEED, DGNB, WELL"
+    parameters:
+      certification:
+        type: string
+        description: "Certification name"
+        required: false
+        default: ""
+      target_level:
+        type: string
+        description: "Target level (e.g. 'Gold')"
+        required: false
+        default: ""
+      area_m2:
+        type: integer
+        description: "Area in m² for cost estimation"
+        required: false
+        default: 0
+  calculate_embodied_carbon:
+    handler: "examples.architecture_review.tools.sustainability.calculate_embodied_carbon"
+    description: "Calculate embodied and biogenic carbon for a material volume"
+    parameters:
+      material:
+        type: string
+        description: "Material name"
+        required: false
+        default: ""
+      volume_m3:
+        type: integer
+        description: "Volume in m³"
+        required: false
+        default: 0
+  get_sustainability_strategies:
+    handler: "examples.architecture_review.tools.sustainability.get_sustainability_strategies"
+    description: "Get sustainability strategies: passive design, renewables, water"
+    parameters:
+      building_type:
+        type: string
+        description: "Building type"
+        required: false
+        default: ""
+      climate_zone:
+        type: string
+        description: "Climate zone"
+        required: false
+        default: ""
+  compare_carbon_footprints:
+    handler: "examples.architecture_review.tools.sustainability.compare_carbon_footprints"
+    description: "Compare carbon footprints of material-volume pairs (format: 'material1 100, material2 200')"
+    parameters:
+      options:
+        type: string
+        description: "Comma-separated material-volume pairs"
+        required: false
+        default: ""
+
+# ── Orchestrator skills ──────────────────────────────────────
+skills:
+  full_design_review:
+    description: >
+      Complete design review: analyze structural requirements and code
+      compliance, estimate construction costs and lifecycle economics,
+      then evaluate sustainability certification and carbon footprint.
+    steps:
+      - agent: structural
+        instruction: "Analyze the structural requirements, compare proposed materials, and check code compliance for the given jurisdiction"
+      - agent: cost
+        instruction: "Based on the structural analysis, estimate construction cost and compare lifecycle costs of the proposed materials"
+      - agent: sustainability
+        instruction: "Based on the proposed design and materials, evaluate sustainability certification potential and calculate the embodied carbon footprint"
+
+  material_selection:
+    description: >
+      Structured comparison of material options: structural performance,
+      cost, and sustainability side-by-side.
+    steps:
+      - agent: structural
+        instruction: "Compare the structural properties of the candidate materials and assess code compliance"
+      - agent: sustainability
+        instruction: "Compare the carbon footprint and certification impact of each material option"
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  structural:
+    description: >
+      Structural engineering reviewer. Analyzes building loads, compares
+      material performance, checks building code compliance (Eurocode,
+      IBC, ASCE, BS), and evaluates fire safety strategies. Use for
+      structural feasibility, material selection, and code questions.
+
+    prompt: >
+      You are a senior structural engineer on an architecture review board.
+      You evaluate building designs for structural feasibility, material
+      performance, and regulatory compliance across international codes.
+
+      When analyzing designs, always consider: load paths, span limits,
+      fire rating requirements, seismic/wind loads per jurisdiction, and
+      carbon implications of material choices. Recommend alternatives
+      when the proposed system is borderline.
+
+      The conversation history contains structured summaries of past design
+      reviews including material decisions, jurisdiction rulings, and
+      structural alternatives evaluated. Use this context.
+
+    llm:
+      model: ollama/llama3.2
+      temperature: 0.2
+
+    tools:
+      - analyze_structure
+      - check_code_compliance
+      - compare_materials
+      - get_fire_strategy
+
+    prompt_sections:
+      summary_compression_system_prompt: >
+        You are a structural engineering conversation summarizer. Extract
+        structured information from design review discussions. Focus on:
+        structural systems, material properties, code compliance decisions,
+        load estimates, span requirements, and fire strategies. Output ONLY
+        valid JSON.
+
+      summary_compression_user_prompt: >
+        Summarise the following structural engineering conversation in
+        structured JSON. Track: (1) proposed structural systems and materials,
+        (2) loads and span requirements, (3) code compliance status by
+        jurisdiction, (4) material comparison outcomes, (5) fire safety
+        assessments and recommendations.
+
+        {transcript}
+
+
+  cost:
+    description: >
+      Construction cost estimator. Projects construction budgets, compares
+      lifecycle costs across materials, and provides regional market rate
+      data. Use for budget questions, cost-benefit analysis, and regional
+      market intelligence.
+
+    prompt: >
+      You are a construction cost consultant on an architecture review board.
+      You estimate project budgets, compare lifecycle economics of design
+      alternatives, and provide regional market intelligence.
+
+      When estimating costs, always provide: construction cost per m²,
+      lifecycle maintenance over 30 years, regional labour and material
+      multipliers, and planning timeline impact. Identify cost drivers
+      and suggest value engineering opportunities.
+
+      The conversation history contains structured summaries of past cost
+      analyses including budget targets, regional adjustments, and value
+      engineering decisions. Use this context.
+
+    llm:
+      model: ollama/llama3.2
+      temperature: 0.2
+
+    tools:
+      - estimate_construction_cost
+      - compare_lifecycle_costs
+      - get_market_rates
+
+    prompt_sections:
+      summary_compression_system_prompt: >
+        You are a construction cost conversation summarizer. Extract
+        structured information from cost discussions. Focus on: budget
+        estimates, lifecycle costs, regional multipliers, value engineering
+        trade-offs, and material cost comparisons. Output ONLY valid JSON.
+
+      summary_compression_user_prompt: >
+        Summarise the following cost estimation conversation in structured
+        JSON. Track: (1) project budget estimates and breakdowns, (2) lifecycle
+        cost comparisons by material, (3) regional market rate data, (4) value
+        engineering decisions, (5) cost-benefit trade-offs evaluated.
+
+        {transcript}
+
+
+  sustainability:
+    description: >
+      Sustainability and carbon consultant. Evaluates certification
+      pathways (BREEAM, LEED, DGNB, WELL), calculates embodied and
+      biogenic carbon, recommends green building strategies, and
+      compares carbon footprints. Use for sustainability questions,
+      certification strategy, and carbon analysis.
+
+    prompt: >
+      You are a sustainability consultant on an architecture review board.
+      You evaluate building designs for environmental performance, carbon
+      footprint, and certification eligibility under international schemes.
+
+      When assessing sustainability, always consider: embodied + biogenic
+      carbon balance, certification pathway and cost, passive design
+      strategies vs active systems, material circularity, and operational
+      energy projections. Prefer strategies with low upfront cost and
+      high operational savings.
+
+      The conversation history contains structured summaries of past
+      sustainability assessments including certification targets, carbon
+      budgets, and green strategy selections. Use this context.
+
+    llm:
+      model: ollama/llama3.2
+      temperature: 0.2
+
+    tools:
+      - evaluate_certification
+      - calculate_embodied_carbon
+      - get_sustainability_strategies
+      - compare_carbon_footprints
+
+    prompt_sections:
+      summary_compression_system_prompt: >
+        You are a sustainability conversation summarizer. Extract structured
+        information from green building discussions. Focus on: certification
+        targets, carbon calculations, green strategies, material circularity,
+        and operational energy projections. Output ONLY valid JSON.
+
+      summary_compression_user_prompt: >
+        Summarise the following sustainability conversation in structured JSON.
+        Track: (1) certification targets and pathways, (2) embodied and biogenic
+        carbon calculations by material, (3) recommended sustainability
+        strategies, (4) carbon budget constraints, (5) circularity and
+        recyclability assessments.
+
+        {transcript}

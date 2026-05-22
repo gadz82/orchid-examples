@@ -1,0 +1,37 @@
+# orchid.yml — Car Dealer example (local files)
+#
+# Uses LocalFileContentSource to discover car specification documents
+# from the data/ directory. No Docker, no RAG, no external services.
+#
+# Usage with the CLI:
+#
+#   pip install -e ../orchid -e ../orchid-cli
+#   orchid chat interactive --config examples/car-dealer-local/orchid.yml
+
+agents:
+  config_path: examples/car-dealer-local/agents.yaml
+
+llm:
+  ollama_api_base: http://host.docker.internal:11434
+  model: ollama/llama3.2
+
+auth:
+  dev_bypass: true
+
+rag:
+  enabled: false
+
+content_sources:
+  - path: examples/car-dealer-local/data
+    source: local
+    file_extensions: [.md, .txt, .pdf]
+    metadata:
+      category: car-specs
+      dealership: acme-auto
+
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: ~/.orchid/car-dealer.db
+
+tracing:
+  langsmith_tracing: false

@@ -1,0 +1,50 @@
+# orchid.yml — Gallery Curator demo configuration
+#
+# Self-contained demo: gallery-curator agent with full conversation
+# summarization pipeline (running_summary + structured output + RAG memory).
+# SQLite persistence stores summaries across sessions.
+#
+# Usage:
+#   ORCHID_CONFIG=examples/gallery-curator/orchid.yml uvicorn orchid_api.main:app
+#
+# Or via the CLI (no API needed):
+#   orchid chat interactive --config examples/gallery-curator/orchid.yml
+#
+# Or via docker-compose:
+#   docker compose -f docker-compose.demo.yml up --build
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  config_path: examples/gallery-curator/agents.yaml
+
+# ── LLM ───────────────────────────────────────────────────────
+llm:
+  model: ollama/llama3.2
+  ollama_api_base: http://host.docker.internal:11434
+
+# ── Auth ──────────────────────────────────────────────────────
+auth:
+  dev_bypass: true
+
+# ── RAG / Vector DB ──────────────────────────────────────────
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  embedding_model: ollama/nomic-embed-text
+
+# ── Document upload ───────────────────────────────────────────
+upload:
+  vision_model: ollama/minicpm-v
+  namespace: uploads
+  max_size_mb: 20
+  chunk_size: 1000
+  chunk_overlap: 200
+
+# ── Chat persistence ─────────────────────────────────────────
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: /data/chats.db
+
+# ── Observability ─────────────────────────────────────────────
+tracing:
+  langsmith_tracing: false
