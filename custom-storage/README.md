@@ -80,11 +80,11 @@ Common variants and how to implement them:
 |---|---|
 | Redis | Use `redis.asyncio`; map sessions to a hash keyed by chat_id, messages to a list per chat_id. Wire `init_db()` to ensure indexes/streams exist. |
 | MongoDB | Use `motor`; one collection per session/message. `extra_migrations_package` typically not relevant — schemaless. |
-| MySQL | Mirror `OrchidPostgresChatStorage`'s shape but adjust DDL + DSN parsing. Honor migrations. |
+| MySQL | Mirror `orchid_storage_postgres.OrchidPostgresChatStorage`'s shape but adjust DDL + DSN parsing. Honor migrations. |
 | In-memory (tests) | Skip the file I/O and keep two dicts on the instance. Acceptable for unit tests; fails as production storage. |
 
 For SQL-backed implementations, study
-`orchid_ai.persistence.postgres.OrchidPostgresChatStorage` and
+`orchid_storage_postgres.OrchidPostgresChatStorage` and
 `orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage` for the
 canonical migration pattern via `OrchidMigrationRunner`.
 

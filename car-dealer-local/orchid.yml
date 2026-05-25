@@ -12,8 +12,7 @@ agents:
   config_path: examples/car-dealer-local/agents.yaml
 
 llm:
-  ollama_api_base: http://host.docker.internal:11434
-  model: ollama/llama3.2
+  model: gemini/gemini-flash-latest
 
 auth:
   dev_bypass: true

@@ -22,7 +22,7 @@ Guidelines for choosing and configuring chat persistence and token storage in pr
 
 ```yaml
 storage:
-  class: orchid_ai.persistence.postgres.OrchidPostgresChatStorage
+  class: orchid_storage_postgres.OrchidPostgresChatStorage
   dsn: postgresql+asyncpg://orchid:${DB_PASSWORD}@postgres:5432/orchid
 ```
 

@@ -6,7 +6,7 @@ A three-agent helpdesk system demonstrating **Pollen + Bloom** event-driven acti
 
 - **Pollen + Bloom fan-out** — Incoming signals trigger multi-step Bloom runs that execute agent pipelines in the background
 - **Event-driven agent activation** — Agents run as Bloom triggers, not just in response to chat messages
-- **PostgreSQL event storage** — Persistent signal/queue/store using Postgres for production-grade reliability
+- **SQLite event storage** — Persistent signal/queue/store using built-in SQLite (PostgreSQL plugin available via `orchid-storage-postgres`)
 - **Three-agent routing pipeline** — Tickets automatically flow through triage, support, and escalation based on priority
 - **Custom event producers** — HTTP webhook ingestion for external ticketing systems
 - **Identity minting** — Service-account Bloom runs that act on behalf of users via `OrchidIdentityResolver.mint_for_user()`
@@ -15,8 +15,8 @@ A three-agent helpdesk system demonstrating **Pollen + Bloom** event-driven acti
 
 | Feature | Configuration |
 |---------|--------------|
-| Event storage | `PostgresEventStorage` |
-| Signal queue | `PostgresSignalQueue` with polling |
+| Event storage | `SQLiteEventStorage` (built-in) — Postgres events plugin roadmap item |
+| Signal queue | `SQLiteSignalQueue` with polling — Postgres signal queue plugin roadmap item |
 | Scheduler | `APSchedulerBackend` for cron triggers |
 | Producers | `HTTPIngestionProducer` (webhook), `SchedulerProducer` (cron) |
 | Processors | `AsyncioWorkerPoolProcessor` with concurrency control |
@@ -41,9 +41,8 @@ A three-agent helpdesk system demonstrating **Pollen + Bloom** event-driven acti
 
 ## Prerequisites
 
-- PostgreSQL database (or use Docker Compose)
-- Gemini API key (for LLM and embeddings)
 - Python 3.11+ with `orchid-ai` and `orchid-api` installed
+- Gemini API key (for LLM and embeddings)
 
 ## Usage
 
@@ -54,7 +53,7 @@ A three-agent helpdesk system demonstrating **Pollen + Bloom** event-driven acti
 docker compose -f docker-compose.demo.yml up --build
 ```
 
-This starts the API, Qdrant, Postgres, and all dependencies.
+This starts the API, Qdrant, and all dependencies.
 
 ### Environment Variables
 
@@ -65,14 +64,13 @@ cd examples/helpdesk
 cp .env.example .env.local
 # Edit .env.local and set:
 #   GEMINI_API_KEY=your_actual_key
-#   HELPDESK_DATABASE_URL=postgresql://user:pass@host:5432/db
 ```
 
 ### Via Standalone API
 
 ```bash
 export GEMINI_API_KEY=your_key
-export HELPDESK_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/orchid
+export HELPDESK_DATABASE_URL=sqlite:///data/helpdesk.db
 
 ORCHID_CONFIG=examples/helpdesk/config/orchid.yml \
   uvicorn orchid_api.main:app --port 8000

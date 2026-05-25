@@ -11,7 +11,7 @@ version: "1"
 
 defaults:
   llm:
-    model: ollama/llama3.2
+    model: gemini/gemini-flash-latest
     temperature: 0.2
   rag:
     enabled: false
