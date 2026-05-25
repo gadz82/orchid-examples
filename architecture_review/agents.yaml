@@ -4,13 +4,13 @@
 # cross-agent orchestrator skills and rag_augmented memory.
 #
 # Activate:
-#   AGENTS_CONFIG_PATH=examples/architecture-review/agents.yaml
+#   AGENTS_CONFIG_PATH=examples/architecture_review/agents.yaml
 
 version: "1"
 
 defaults:
   llm:
-    model: "ollama/llama3.2"
+    model: gemini/gemini-flash-latest
     temperature: 0.2
   rag:
     enabled: false
@@ -29,14 +29,14 @@ supervisor:
   history_max_turns: 35
   history_max_chars: 1200
   history_summary_enabled: true
-  history_summary_model: ollama/llama3.2
+  history_summary_model: gemini/gemini-flash-latest
   history_summary_recent_turns: 10
   skip_synthesis_when_single_agent: true
 
   memory:
     strategy: "rag_augmented"
     summary_recent_turns: 10
-    summary_model: ollama/llama3.2
+    summary_model: gemini/gemini-flash-latest
     structured_output: true
     persist_summary: true
     summary_prompt: null
@@ -262,7 +262,7 @@ agents:
       structural alternatives evaluated. Use this context.
 
     llm:
-      model: ollama/llama3.2
+      model: gemini/gemini-flash-latest
       temperature: 0.2
 
     tools:
@@ -311,7 +311,7 @@ agents:
       engineering decisions. Use this context.
 
     llm:
-      model: ollama/llama3.2
+      model: gemini/gemini-flash-latest
       temperature: 0.2
 
     tools:
@@ -359,7 +359,7 @@ agents:
       budgets, and green strategy selections. Use this context.
 
     llm:
-      model: ollama/llama3.2
+      model: gemini/gemini-flash-latest
       temperature: 0.2
 
     tools:

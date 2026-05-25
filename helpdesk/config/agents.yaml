@@ -280,12 +280,18 @@ events:
   enabled: true
 
   store:
-    class: orchid_ai.events.backends.postgres.PostgresEventStorage
+    # PostgresEventStorage was removed from orchid core during the plugin
+    # extraction (Phase 1).  Install orchid-storage-postgres and reference
+    # orchid_storage_postgres.events.PostgresEventStorage when available.
+    class: orchid_ai.events.backends.sqlite.SQLiteEventStorage
     extra_args:
-      dsn: ${HELPDESK_DATABASE_URL}
+      dsn: data/helpdesk_events.db
 
   queue:
-    class: orchid_ai.events.queues.postgres.PostgresSignalQueue
+    # PostgresSignalQueue was removed from orchid core during the plugin
+    # extraction (Phase 1).  Use SQLiteSignalQueue (built-in) or
+    # InMemorySignalQueue for local dev.
+    class: orchid_ai.events.queues.sqlite.SQLiteSignalQueue
     notify_enabled: true
     poll_interval_ms: 200
     lease_seconds: 300   # 5 min — covers the full triage→support→escalation pipeline

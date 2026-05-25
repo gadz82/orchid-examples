@@ -44,7 +44,7 @@ storage:
 # To manage agent configs via PostgreSQL instead of agents.yaml:
 # config_storage:
 #   enabled: true
-#   class: orchid_ai.persistence.config_postgres.OrchidPostgresConfigStorage
+#   class: orchid_storage_postgres.config_storage.OrchidPostgresConfigStorage  # install orchid-storage-postgres plugin
 #   dsn: postgresql://user:pass@host:5432/db
 
 # ── Startup hook seeds knowledge into RAG ────────────────────

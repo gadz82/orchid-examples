@@ -259,6 +259,13 @@ async def build_expert_fleet(
         logger.warning("[FleetBuilder] No agent configs generated — fleet empty")
         return
 
+    for cfg in fleet_configs:
+        logger.info(
+            "[FleetBuilder] Generated agent: %s — %s",
+            cfg["name"],
+            cfg.get("description", "(no description)"),
+        )
+
     # ── 7. Persist to SQLite ─────────────────────────────────────
     await _persist_configs(db_dsn, fleet_configs)
 
@@ -328,7 +335,11 @@ def _extract_configs_from_result(
 def _try_parse_json(text: str) -> list[dict[str, Any]]:
     """Try to extract a JSON array of agent configs from text output.
 
-    Tolerant of markdown fences, prose wrappers, and trailing commas.
+    Handles:
+    - Markdown code fences (`````json`)
+    - Bare JSON array or object
+    - Agent prefix wrappers (``[Summariser Agent]``)
+    - Prose wrapping before/after the JSON
     """
     candidates: list[dict[str, Any]] = []
 
@@ -362,11 +373,55 @@ def _try_parse_json(text: str) -> list[dict[str, Any]]:
         elif in_block:
             buf.append(line)
 
+    if candidates:
+        return candidates
+
     # Try the whole text as JSON
     try:
         _collect(json.loads(text))
+        if candidates:
+            return candidates
     except json.JSONDecodeError:
         pass
+
+    # Try to find the first JSON array in the text (handles agent prefixes
+    # like ``[Summariser Agent]\n[...]`` and prose wrappers)
+    start = text.find("[")
+    while start != -1:
+        depth = 0
+        for end in range(start, len(text)):
+            if text[end] == "[":
+                depth += 1
+            elif text[end] == "]":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        _collect(json.loads(text[start : end + 1]))
+                        if candidates:
+                            return candidates
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                    break
+        start = text.find("[", start + 1)
+
+    # Try to find the first JSON object (single agent output)
+    start = text.find("{")
+    while start != -1:
+        depth = 0
+        for end in range(start, len(text)):
+            if text[end] == "{":
+                depth += 1
+            elif text[end] == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        _collect(json.loads(text[start : end + 1]))
+                        if candidates:
+                            return candidates
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                    break
+        start = text.find("{", start + 1)
 
     return candidates
 
@@ -392,7 +447,7 @@ async def _persist_configs(
                 "name": name,
                 "description": cfg.get("description", ""),
                 "prompt": cfg.get("prompt", ""),
-                "rag": {},
+                "rag": {"enabled": False},
                 "tools": [],
             }
             config_json = json.dumps(agent_cfg)

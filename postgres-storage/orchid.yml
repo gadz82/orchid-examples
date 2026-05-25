@@ -1,17 +1,17 @@
-# orchid.yml — Basketball demo configuration
+# orchid.yml — PostgreSQL storage example
 #
-# Self-contained demo: basketball + psychologist agents with SQLite storage.
-# No Docebo account, MCP servers, or external APIs required.
+# Demonstrates orchid-storage-postgres plugin: chat persistence (asyncpg),
+# PostgreSQL checkpointer, visibility fragment, and Qdrant RAG.
 #
 # Usage:
-#   ORCHID_CONFIG=examples/basketball/orchid.yml uvicorn orchid_api.main:app
+#   ORCHID_CONFIG=examples/postgres-storage/orchid.yml uvicorn orchid_api.main:app
 #
 # Or via docker-compose:
-#   docker compose -f docker-compose.demo.yml up --build
+#   script/start_postgres_storage.sh
 
 # ── Agents ────────────────────────────────────────────────────
 agents:
-  config_path: examples/basketball/agents.yaml
+  config_path: examples/postgres-storage/agents.yaml
 
 # ── LLM ───────────────────────────────────────────────────────
 llm:
@@ -22,23 +22,20 @@ llm:
 auth:
   dev_bypass: true
 
-# ── RAG / Vector DB ──────────────────────────────────────────
+# ── RAG / Vector DB ───────────────────────────────────────────
 rag:
   vector_backend: qdrant
   qdrant_url: http://qdrant:6333
   embedding_model: ollama/nomic-embed-text
 
-# ── Document upload ───────────────────────────────────────────
-upload:
-  vision_model: ollama/minicpm-v
-  namespace: uploads
-  max_size_mb: 20
-  chunk_size: 1000
-  chunk_overlap: 200
-
-# ── Chat persistence ─────────────────────────────────────────
+# ── Chat persistence (PostgreSQL via orchid-storage-postgres) ─
 storage:
   class: orchid_storage_postgres.OrchidPostgresChatStorage
+  dsn: postgresql://postgres:postgres@postgres:5432/orchid
+
+# ── Checkpointer (PostgreSQL, bundled with orchid-storage-postgres) ─
+checkpointer:
+  type: postgres
   dsn: postgresql://postgres:postgres@postgres:5432/orchid
 
 # ── Observability ─────────────────────────────────────────────

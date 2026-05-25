@@ -125,5 +125,5 @@ print(handler.get_metrics())
 - **Add a new city**: edit `_HOTELS` in `tools/hotels.py` and `_DESTINATIONS` in `hooks/startup.py`
 - **Add a new agent**: define it in `agents.yaml` — for config-only agents, no Python needed
 - **Add custom MCP servers**: add an `mcp_servers:` list under any agent in `agents.yaml`
-- **Swap checkpointer to PostgreSQL**: change `checkpointer.type` to `postgres` and install `langgraph-checkpoint-postgres`
+- **Swap checkpointer to PostgreSQL**: install `orchid-storage-postgres` plugin and change `checkpointer.type` to `postgres`
 - **Disable HITL for demos**: remove `requires_approval: true` from booking tools (but checkpointer still enables conversation-state persistence)

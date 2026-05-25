@@ -5,14 +5,14 @@
 # entity tracking across design iterations.
 #
 # Usage:
-#   ORCHID_CONFIG=examples/architecture-review/orchid.yml uvicorn orchid_api.main:app
-#   orchid chat interactive --config examples/architecture-review/orchid.yml
+#   ORCHID_CONFIG=examples/architecture_review/orchid.yml uvicorn orchid_api.main:app
+#   orchid chat interactive --config examples/architecture_review/orchid.yml
 
 agents:
-  config_path: examples/architecture-review/agents.yaml
+  config_path: examples/architecture_review/agents.yaml
 
 llm:
-  model: ollama/llama3.2
+  model: gemini/gemini-flash-latest
   ollama_api_base: http://host.docker.internal:11434
 
 auth:
