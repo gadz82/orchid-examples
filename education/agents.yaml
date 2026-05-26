@@ -121,6 +121,7 @@ skills:
 
 agents:
   content-analyzer:
+    class: examples.education.agents.bloom_agent.EducationAgent
     description: >
       Educational content analyst. Extracts headings, repeated themes,
       and core concepts from uploaded learning material so downstream
@@ -310,6 +311,21 @@ events:
 
           Source:
           {{payload.source_text}}
+        identity: { mode: act_as_user, user_id_from: signal.user_id }
+        respect_chat_binding: true
+      retry: { max: 1, backoff: exponential }
+      parallelism: per_user
+
+    - id: education-content-request
+      "on":
+        signal: education.content_request
+      emits:
+        agent: content-analyzer
+        prompt_template: |
+          [bloom]
+          chat_id: {{signal.chat_binding.chat_id}}
+
+          {{payload.query}}
         identity: { mode: act_as_user, user_id_from: signal.user_id }
         respect_chat_binding: true
       retry: { max: 1, backoff: exponential }
