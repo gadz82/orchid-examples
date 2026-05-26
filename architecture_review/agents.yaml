@@ -50,168 +50,42 @@ supervisor:
 tools:
   # Structural tools
   analyze_structure:
-    handler: "examples.architecture_review.tools.structural.analyze_structure"
+    class: "examples.architecture_review.tools.structural.AnalyzeStructureTool"
     description: "Analyze structural requirements: load estimates, recommended systems, span limits"
-    parameters:
-      building_type:
-        type: string
-        description: "Building type (e.g. 'office')"
-        required: false
-        default: ""
-      floors:
-        type: integer
-        description: "Number of floors"
-        required: false
-        default: 0
-      area_m2:
-        type: integer
-        description: "Gross floor area in m²"
-        required: false
-        default: 0
   check_code_compliance:
-    handler: "examples.architecture_review.tools.structural.check_code_compliance"
+    class: "examples.architecture_review.tools.structural.CheckCodeComplianceTool"
     description: "Check building code compliance for a jurisdiction and material"
-    parameters:
-      jurisdiction:
-        type: string
-        description: "Jurisdiction (e.g. 'EU', 'US', 'UK')"
-        required: false
-        default: ""
-      material:
-        type: string
-        description: "Primary structural material"
-        required: false
-        default: ""
   compare_materials:
-    handler: "examples.architecture_review.tools.structural.compare_materials"
+    class: "examples.architecture_review.tools.structural.CompareMaterialsTool"
     description: "Compare two structural materials: strength, carbon, cost, fire rating"
-    parameters:
-      material_a:
-        type: string
-        description: "First material"
-        required: false
-        default: ""
-      material_b:
-        type: string
-        description: "Second material"
-        required: false
-        default: ""
   get_fire_strategy:
-    handler: "examples.architecture_review.tools.structural.get_fire_strategy"
+    class: "examples.architecture_review.tools.structural.GetFireStrategyTool"
     description: "Get fire safety strategy: intrinsic rating, protection, evacuation"
-    parameters:
-      material:
-        type: string
-        description: "Structural material"
-        required: false
-        default: ""
-      floors:
-        type: integer
-        description: "Number of floors"
-        required: false
-        default: 0
 
   # Cost tools
   estimate_construction_cost:
-    handler: "examples.architecture_review.tools.cost.estimate_construction_cost"
+    class: "examples.architecture_review.tools.cost.EstimateConstructionCostTool"
     description: "Estimate construction cost by building type, area, and quality tier"
-    parameters:
-      building_type:
-        type: string
-        description: "Building type"
-        required: false
-        default: ""
-      area_m2:
-        type: integer
-        description: "Gross floor area in m²"
-        required: false
-        default: 0
-      quality:
-        type: string
-        description: "Quality tier: low, medium, high"
-        required: false
-        default: "medium"
   compare_lifecycle_costs:
-    handler: "examples.architecture_review.tools.cost.compare_lifecycle_costs"
+    class: "examples.architecture_review.tools.cost.CompareLifecycleCostsTool"
     description: "Compare lifecycle costs: initial, maintenance, 30-year total"
-    parameters:
-      material:
-        type: string
-        description: "Structural material"
-        required: false
-        default: ""
-      area_m2:
-        type: integer
-        description: "Area in m²"
-        required: false
-        default: 0
   get_market_rates:
-    handler: "examples.architecture_review.tools.cost.get_market_rates"
+    class: "examples.architecture_review.tools.cost.GetMarketRatesTool"
     description: "Get regional market rates: labour, materials, planning timeline"
-    parameters:
-      region:
-        type: string
-        description: "City or region"
-        required: false
-        default: ""
 
   # Sustainability tools
   evaluate_certification:
-    handler: "examples.architecture_review.tools.sustainability.evaluate_certification"
+    class: "examples.architecture_review.tools.sustainability.EvaluateCertificationTool"
     description: "Evaluate sustainability certification: BREEAM, LEED, DGNB, WELL"
-    parameters:
-      certification:
-        type: string
-        description: "Certification name"
-        required: false
-        default: ""
-      target_level:
-        type: string
-        description: "Target level (e.g. 'Gold')"
-        required: false
-        default: ""
-      area_m2:
-        type: integer
-        description: "Area in m² for cost estimation"
-        required: false
-        default: 0
   calculate_embodied_carbon:
-    handler: "examples.architecture_review.tools.sustainability.calculate_embodied_carbon"
+    class: "examples.architecture_review.tools.sustainability.CalculateEmbodiedCarbonTool"
     description: "Calculate embodied and biogenic carbon for a material volume"
-    parameters:
-      material:
-        type: string
-        description: "Material name"
-        required: false
-        default: ""
-      volume_m3:
-        type: integer
-        description: "Volume in m³"
-        required: false
-        default: 0
   get_sustainability_strategies:
-    handler: "examples.architecture_review.tools.sustainability.get_sustainability_strategies"
+    class: "examples.architecture_review.tools.sustainability.GetSustainabilityStrategiesTool"
     description: "Get sustainability strategies: passive design, renewables, water"
-    parameters:
-      building_type:
-        type: string
-        description: "Building type"
-        required: false
-        default: ""
-      climate_zone:
-        type: string
-        description: "Climate zone"
-        required: false
-        default: ""
   compare_carbon_footprints:
-    handler: "examples.architecture_review.tools.sustainability.compare_carbon_footprints"
+    class: "examples.architecture_review.tools.sustainability.CompareCarbonFootprintsTool"
     description: "Compare carbon footprints of material-volume pairs (format: 'material1 100, material2 200')"
-    parameters:
-      options:
-        type: string
-        description: "Comma-separated material-volume pairs"
-        required: false
-        default: ""
 
 # ── Orchestrator skills ──────────────────────────────────────
 skills:

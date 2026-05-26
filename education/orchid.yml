@@ -1,0 +1,38 @@
+# orchid.yml — Education fleet demo configuration
+#
+# Turns uploaded course material into quizzes, lesson plans, and
+# multi-format export packages. Output files default to
+# ``./orchid_exports``; set ``ORCHID_EXPORT_DIR`` to override.
+#
+# Usage:
+#   ORCHID_CONFIG=examples/education/orchid.yml uvicorn orchid_api.main:app
+
+agents:
+  config_path: examples/education/agents.yaml
+
+llm:
+  model: ollama/llama3.2
+  ollama_api_base: http://host.docker.internal:11434
+
+auth:
+  dev_bypass: true
+  identity_resolver_class: examples.education.identity.EducationIdentityResolver
+
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  embedding_model: ollama/nomic-embed-text
+
+upload:
+  vision_model: ollama/minicpm-v
+  namespace: education-uploads
+  max_size_mb: 20
+  chunk_size: 1000
+  chunk_overlap: 200
+
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  dsn: ~/.orchid/education_chats.db
+
+tracing:
+  langsmith_tracing: false

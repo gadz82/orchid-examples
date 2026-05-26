@@ -78,69 +78,23 @@ guardrails:
 # ── Built-in tools ────────────────────────────────────────────
 tools:
   get_player_stats:
-    handler: examples.basketball.tools.basketball.get_player_stats
+    class: examples.basketball.tools.basketball.GetPlayerStatsTool
     description: "Get stats for an NBA player (points, rebounds, assists, team, position)"
-    parameters:
-      player_name:
-        type: string
-        description: "Full or partial NBA player name to look up"
-        required: false
-        default: ""
   compare_players:
-    handler: examples.basketball.tools.basketball.compare_players
+    class: examples.basketball.tools.basketball.ComparePlayersTool
     description: "Side-by-side comparison of two NBA players with advantage analysis"
-    parameters:
-      player_a:
-        type: string
-        description: "Full or partial name of the first player"
-        required: false
-        default: ""
-      player_b:
-        type: string
-        description: "Full or partial name of the second player"
-        required: false
-        default: ""
   get_team_roster:
-    handler: examples.basketball.tools.basketball.get_team_roster
+    class: examples.basketball.tools.basketball.GetTeamRosterTool
     description: "Get all players on a given NBA team"
-    parameters:
-      team_name:
-        type: string
-        description: "NBA team name (full or partial, e.g. 'Lakers')"
-        required: false
-        default: ""
   assess_motivation:
-    handler: examples.basketball.tools.psychology.assess_motivation
+    class: examples.basketball.tools.psychology.AssessMotivationTool
     description: "Assess a player's motivation level, drive type, and risk factors"
-    parameters:
-      player_name:
-        type: string
-        description: "Full or partial player name to assess"
-        required: false
-        default: ""
-      situation:
-        type: string
-        description: "Current situation or context (e.g. 'playoff pressure', 'post-injury comeback')"
-        required: false
-        default: ""
   suggest_mental_strategy:
-    handler: examples.basketball.tools.psychology.suggest_mental_strategy
+    class: examples.basketball.tools.psychology.SuggestMentalStrategyTool
     description: "Suggest mental performance strategies for a given situation (e.g. slump, pressure)"
-    parameters:
-      situation:
-        type: string
-        description: "The situation to address (e.g. 'slump', 'pressure', 'confidence', 'team conflict')"
-        required: false
-        default: ""
   analyze_team_dynamics:
-    handler: examples.basketball.tools.psychology.analyze_team_dynamics
+    class: examples.basketball.tools.psychology.AnalyzeTeamDynamicsTool
     description: "Analyze team chemistry, cohesion, and group motivation patterns"
-    parameters:
-      team_name:
-        type: string
-        description: "NBA team name to analyze (full or partial)"
-        required: false
-        default: ""
 
 # ── Orchestrator-level skills (cross-agent) ───────────────────
 skills:

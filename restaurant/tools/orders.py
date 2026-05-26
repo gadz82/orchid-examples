@@ -11,6 +11,8 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 # -- In-memory order store (mock) -------------------------------------------
 
 _ORDERS: dict[str, dict[str, Any]] = {
@@ -53,6 +55,15 @@ _PRICES: dict[str, float] = {
     "pan-seared duck breast": 34.00,
     "lobster linguine": 38.00,
 }
+
+
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
 
 
 def _find_price(item_name: str) -> float | None:
@@ -221,3 +232,62 @@ def calculate_bill(order_id: str = "", **kwargs: Any) -> dict[str, Any]:
         "payment_methods": ["cash", "credit card", "mobile pay"],
         "message": f"Bill for table {order['table_number']}: ${total:.2f} (incl. tax and 18% service charge).",
     }
+
+
+class PlaceOrderTool(OrchidTool):
+    name = "place_order"
+    description = "Place a new order with comma-separated item names and optional table number"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "string",
+                "description": "Comma-separated list of menu item names to order",
+                "default": "",
+            },
+            "table_number": {
+                "type": "integer",
+                "description": "Table number for dine-in (0 for takeout)",
+                "default": 0,
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=place_order(**_tool_kwargs(tool_input)))
+
+
+class GetOrderStatusTool(OrchidTool):
+    name = "get_order_status"
+    description = "Check the current status and details of an existing order by order ID"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "order_id": {
+                "type": "string",
+                "description": "The order ID to look up (e.g. 'ORD-1001')",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_order_status(**_tool_kwargs(tool_input)))
+
+
+class CalculateBillTool(OrchidTool):
+    name = "calculate_bill"
+    description = "Calculate the itemized bill for an order including tax and service charge"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "order_id": {
+                "type": "string",
+                "description": "The order ID to calculate the bill for",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=calculate_bill(**_tool_kwargs(tool_input)))

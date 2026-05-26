@@ -8,6 +8,8 @@ own RAG block.
 
 from __future__ import annotations
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 # A tiny in-memory glossary so the demo runs without external services.
 _GLOSSARY: dict[str, str] = {
     "rag": (
@@ -44,3 +46,21 @@ async def lookup_glossary(term: str, **_: object) -> dict[str, object]:
     if key not in _GLOSSARY:
         return {"error": f"No glossary entry for {term!r}"}
     return {"term": key, "definition": _GLOSSARY[key]}
+
+
+class LookupGlossaryTool(OrchidTool):
+    name = "lookup_glossary"
+    description = "Fetch a term's definition from the glossary store"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "term": {
+                "type": "string",
+                "description": "The term to look up.",
+            },
+        },
+        "required": ["term"],
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=await lookup_glossary(**tool_input.parameters))

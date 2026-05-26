@@ -40,15 +40,15 @@ defaults:
 # ── Built-in tools (used by the parallel_tools demo) ───────────
 tools:
   metric_a:
-    handler: "examples.tool-strategies.tools.metrics.metric_a"
+    class: "examples.tool-strategies.tools.metrics.MetricATool"
     description: "Read-only fast metric A.  Safe for parallel dispatch."
     parallel_safe: true
   metric_b:
-    handler: "examples.tool-strategies.tools.metrics.metric_b"
+    class: "examples.tool-strategies.tools.metrics.MetricBTool"
     description: "Read-only fast metric B.  Safe for parallel dispatch."
     parallel_safe: true
   metric_c:
-    handler: "examples.tool-strategies.tools.metrics.metric_c"
+    class: "examples.tool-strategies.tools.metrics.MetricCTool"
     description: "Read-only fast metric C.  Safe for parallel dispatch."
     parallel_safe: true
 

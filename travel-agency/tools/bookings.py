@@ -14,9 +14,20 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 # ── In-memory booking store ─────────────────────────────────────
 
 _BOOKINGS: dict[str, dict[str, Any]] = {}
+
+
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
 
 
 def book_flight(
@@ -153,3 +164,67 @@ def cancel_booking(booking_id: str = "", **kwargs: Any) -> dict[str, Any]:
 def list_bookings(**kwargs: Any) -> dict[str, Any]:
     """List all bookings in the current session (in-memory only)."""
     return {"count": len(_BOOKINGS), "bookings": list(_BOOKINGS.values())}
+
+
+class BookFlightTool(OrchidTool):
+    name = "book_flight"
+    description = "Confirm a flight booking for a passenger. Requires human approval."
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "flight_no": {"type": "string"},
+            "passenger_name": {"type": "string"},
+        },
+        "required": ["flight_no", "passenger_name"],
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=book_flight(**_tool_kwargs(tool_input)))
+
+
+class BookHotelTool(OrchidTool):
+    name = "book_hotel"
+    description = "Confirm a hotel booking for a guest. Requires human approval."
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "hotel_id": {"type": "string"},
+            "guest_name": {"type": "string"},
+            "check_in": {
+                "type": "string",
+                "description": "Check-in date (YYYY-MM-DD)",
+            },
+            "check_out": {
+                "type": "string",
+                "description": "Check-out date (YYYY-MM-DD)",
+            },
+        },
+        "required": ["hotel_id", "guest_name", "check_in", "check_out"],
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=book_hotel(**_tool_kwargs(tool_input)))
+
+
+class CancelBookingTool(OrchidTool):
+    name = "cancel_booking"
+    description = "Cancel an existing booking. Requires human approval."
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "booking_id": {"type": "string"},
+        },
+        "required": ["booking_id"],
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=cancel_booking(**_tool_kwargs(tool_input)))
+
+
+class ListBookingsTool(OrchidTool):
+    name = "list_bookings"
+    description = "List all bookings placed in this session."
+    parameters_schema = {"type": "object", "properties": {}}
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=list_bookings(**_tool_kwargs(tool_input)))

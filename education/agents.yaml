@@ -1,0 +1,314 @@
+version: "1"
+
+defaults:
+  llm:
+    model: "ollama/llama3.2"
+    temperature: 0.2
+  rag:
+    enabled: true
+    k: 8
+    max_context_chars: 4000
+    ingestion:
+      strategy: headered
+      chunk_size: 1000
+      chunk_overlap: 150
+    retrieval:
+      strategy: simple
+      query_transformers: ["reformulate"]
+
+supervisor:
+  assistant_name: "Education Studio"
+
+tools:
+  extract_concepts:
+    class: "examples.education.tools.content.extract_concepts.ExtractConceptsTool"
+    description: "Extract key concepts, headings, and repeated themes from source material"
+    parallel_safe: true
+  generate_questions:
+    class: "examples.education.tools.content.generate_questions.GenerateQuestionsTool"
+    description: "Generate quiz question scaffolds from extracted concepts"
+    parallel_safe: true
+  validate_questions:
+    class: "examples.education.tools.content.validate.ValidateQuestionsTool"
+    description: "Validate generated questions for structure and duplication"
+    parallel_safe: true
+  build_lesson_structure:
+    class: "examples.education.tools.content.build_lesson.BuildLessonStructureTool"
+    description: "Build a lesson-plan structure from concepts and source text"
+    parallel_safe: true
+  define_learning_objectives:
+    class: "examples.education.tools.content.format_lesson.DefineLearningObjectivesTool"
+    description: "Create Bloom-aligned learning objectives for the lesson"
+    parallel_safe: true
+  format_lesson_section:
+    class: "examples.education.tools.content.format_lesson.FormatLessonSectionTool"
+    description: "Format one lesson section as Markdown"
+    parallel_safe: true
+  format_multiple_choice:
+    class: "examples.education.tools.content.format_quiz.FormatMultipleChoiceTool"
+    description: "Format multiple-choice questions as Markdown with an answer key"
+    parallel_safe: true
+  format_true_false:
+    class: "examples.education.tools.content.format_quiz.FormatTrueFalseTool"
+    description: "Format true-false questions as Markdown with an answer key"
+    parallel_safe: true
+  format_fill_blank:
+    class: "examples.education.tools.content.format_quiz.FormatFillBlankTool"
+    description: "Format fill-in-the-blank questions as Markdown"
+    parallel_safe: true
+  format_matching:
+    class: "examples.education.tools.content.format_quiz.FormatMatchingTool"
+    description: "Format matching questions as Markdown"
+    parallel_safe: true
+  generate_pdf:
+    class: "examples.education.tools.output.generate_pdf.GeneratePDFTool"
+    description: "Export content as a PDF document"
+    parallel_safe: false
+  generate_docx:
+    class: "examples.education.tools.output.generate_docx.GenerateDOCXTool"
+    description: "Export content as a DOCX document"
+    parallel_safe: false
+  generate_pptx:
+    class: "examples.education.tools.output.generate_pptx.GeneratePPTXTool"
+    description: "Export content as a PPTX presentation"
+    parallel_safe: false
+  generate_markdown:
+    class: "examples.education.tools.output.generate_markdown.GenerateMarkdownTool"
+    description: "Export content as Markdown"
+    parallel_safe: false
+  generate_txt:
+    class: "examples.education.tools.output.generate_txt.GenerateTXTTool"
+    description: "Export content as plain text"
+    parallel_safe: false
+
+skills:
+  generate_quiz:
+    description: >
+      Analyze the uploaded educational material, extract the most
+      teachable concepts, and turn them into a grounded quiz with
+      answers and short explanations.
+    steps:
+      - agent: content-analyzer
+        instruction: "Extract the key concepts, headings, and foundational ideas from the source material."
+      - agent: quiz-generator
+        instruction: "Generate a quiz with accurate answers and concise explanations grounded in those concepts."
+      - agent: format-exporter
+        instruction: "Format the quiz for export in the user's requested file format."
+  generate_lesson:
+    description: >
+      Analyze the source material and assemble a paced lesson plan with
+      learning objectives, structured sections, and assessment ideas.
+    steps:
+      - agent: content-analyzer
+        instruction: "Identify the concepts that should drive a coherent lesson."
+      - agent: lesson-builder
+        instruction: "Build a lesson plan with objectives, sections, activities, and assessment."
+      - agent: format-exporter
+        instruction: "Format the lesson plan for the requested output format."
+  generate_full_package:
+    description: >
+      Produce a full teaching package from the source material: quiz,
+      lesson plan, and presentation-ready exports.
+    steps:
+      - agent: content-analyzer
+        instruction: "Extract and prioritise the concepts that matter most across the source material."
+      - agent: quiz-generator
+        instruction: "Generate a review quiz that covers the extracted concepts."
+      - agent: lesson-builder
+        instruction: "Build a lesson plan that teaches the same concepts in a structured sequence."
+      - agent: format-exporter
+        instruction: "Prepare the quiz, lesson, and presentation artifacts for export."
+
+agents:
+  content-analyzer:
+    description: >
+      Educational content analyst. Extracts headings, repeated themes,
+      and core concepts from uploaded learning material so downstream
+      agents can build quizzes and lessons on top of them.
+    prompt: |
+      You are a Content Analyzer for educational material.
+      Read the available source content, identify the core concepts,
+      and explain why they matter for teaching.
+
+      Prefer the built-in extraction tool for structured outputs.
+      When summarising, keep your response grounded in the source.
+    tools:
+      - extract_concepts
+    rag:
+      namespace: education-source
+      enabled: true
+    execution_hints:
+      parallel_safe: true
+
+  quiz-generator:
+    description: >
+      Quiz specialist. Converts extracted concepts into answerable
+      questions with clear solutions and brief explanations.
+    prompt: |
+      You are a Quiz Generator for educational content.
+      Use the extracted concepts to draft clear, answerable questions.
+
+      Every quiz must include:
+      - a correct answer
+      - a short explanation
+      - consistent difficulty labels
+
+      Validate the output before you finalise it.
+    tools:
+      - generate_questions
+      - validate_questions
+    mini_agent:
+      enabled: true
+      max_count: 4
+      tool_allowlist_mode: inferred
+      decomposer_prompt: |
+        You are deciding whether the current quiz-generation request for "{agent_name}"
+        should fan out into parallel quiz-writing mini-agents.
+
+        Agent description: {agent_description}
+        Agent prompt: {agent_prompt}
+        Available tools: {tool_inventory}
+        User request: {user_query}
+        Conversation history: {history}
+
+        Fork when:
+        - there are 2 or more distinct source files, source sections, or source chunks
+        - each source can produce its own grounded question draft without waiting on the others
+
+        Do not fork when:
+        - only one source file or chunk is present
+        - the request depends on cross-document synthesis before writing questions
+
+        When you fork:
+        - emit between 2 and {max_count} independent sub_tasks
+        - label each sub-task with the source or theme it covers
+        - leave allowed_tools empty when the full quiz toolset is acceptable
+      aggregator_prompt: |
+        You are combining the parallel quiz drafts for the "{agent_name}" agent.
+        Original request: {user_query}
+
+        You ran {n} independent quiz-building sub-tasks. Their outcomes:
+        {outcome_block}
+
+        Produce one unified Markdown quiz.
+        Rules:
+        - merge overlapping questions and keep only one version of near-duplicates
+        - preserve the strongest wording when duplicates overlap
+        - sort questions by difficulty from easy to hard
+        - start with a short summary that states the total number of questions and the covered concepts
+        - do not mention mini-agents or internal architecture
+    rag:
+      namespace: education
+      enabled: true
+    execution_hints:
+      parallel_safe: true
+
+  lesson-builder:
+    description: >
+      Lesson planning specialist. Turns concepts into a paced lesson
+      structure with objectives, sections, activities, and assessment.
+    prompt: |
+      You are a Lesson Builder.
+      Transform the extracted concepts into a teachable lesson plan
+      with realistic pacing, Bloom-aligned objectives, and practical
+      assessment guidance.
+
+      Keep the structure concise and classroom-ready.
+    tools:
+      - build_lesson_structure
+      - define_learning_objectives
+      - format_lesson_section
+    rag:
+      namespace: education
+      enabled: true
+    execution_hints:
+      parallel_safe: true
+
+  format-exporter:
+    description: >
+      Packaging and export specialist. Formats quizzes and lesson plans
+      and writes them out as PDF, DOCX, PPTX, Markdown, or plain text.
+    prompt: |
+      You are a Format Exporter.
+      Prepare educational artifacts for delivery in the requested
+      format while preserving headings, answer keys, and lesson
+      structure.
+
+      Use the formatting tools before writing final files.
+    tools:
+      - format_multiple_choice
+      - format_true_false
+      - format_fill_blank
+      - format_matching
+      - generate_pdf
+      - generate_docx
+      - generate_pptx
+      - generate_markdown
+      - generate_txt
+    rag:
+      enabled: false
+      namespace: education-exports
+    execution_hints:
+      parallel_safe: false
+
+events:
+  enabled: true
+
+  store:
+    class: orchid_ai.events.backends.sqlite.SQLiteEventStorage
+    extra_args:
+      dsn: /data/education_events.db
+
+  queue:
+    class: orchid_ai.events.queues.sqlite.SQLiteSignalQueue
+    poll_interval_ms: 200
+    lease_seconds: 60
+    max_attempts: 3
+
+  scheduler:
+    class: orchid_ai.events.schedulers.apscheduler.APSchedulerBackend
+
+  producers:
+    - class: orchid_ai.events.producers.scheduler.SchedulerProducer
+    - class: orchid_ai.events.producers.internal.InternalEmissionProducer
+
+  processors:
+    - class: orchid_ai.events.processors.asyncio_pool.AsyncioWorkerPoolProcessor
+      concurrency: 2
+      poll_interval_ms: 200
+      lease_seconds: 60
+      max_attempts: 3
+
+  schedules:
+    - id: weekly-quiz-cron
+      cron: "0 8 * * 1"
+      trigger_id: weekly-quiz
+      identity: { mode: service_account, name: quiz-bot }
+
+  triggers:
+    - id: weekly-quiz
+      "on": { signal: cron, cron: "0 8 * * 1" }
+      emits:
+        agent: quiz-generator
+        prompt_template: |
+          Generate a weekly review quiz with 10 questions covering key educational topics.
+          Use mixed difficulty and question types. Format as Markdown.
+        identity: { mode: service_account, name: quiz-bot }
+        visibility: tenant
+      retry: { max: 2, backoff: exponential }
+      parallelism: unbounded
+
+    - id: chat-bound-generation
+      "on":
+        signal: education.generate
+      emits:
+        agent: content-analyzer
+        prompt_template: |
+          Extract key concepts from this source text and prepare a concise study summary.
+
+          Source:
+          {{payload.source_text}}
+        identity: { mode: act_as_user, user_id_from: signal.user_id }
+        respect_chat_binding: true
+      retry: { max: 1, backoff: exponential }
+      parallelism: per_user
