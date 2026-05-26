@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from orchid_ai.core.events.errors import (
-    OrchidIdentityNotMintableError,
-    OrchidServiceAccountUnknownError,
-)
+from orchid_ai.core.events.errors import OrchidServiceAccountUnknownError
 from orchid_ai.core.identity import OrchidIdentityResolver
 from orchid_ai.core.state import OrchidAuthContext
 
@@ -42,10 +39,18 @@ class EducationIdentityResolver(OrchidIdentityResolver):
 
     async def mint_for_user(self, tenant_key: str, user_id: str) -> OrchidAuthContext:
         token = self._user_tokens.get(user_id)
-        if token is None:
-            raise OrchidIdentityNotMintableError(tenant_key, user_id)
+        if token is not None:
+            return OrchidAuthContext(
+                access_token=token,
+                tenant_key=tenant_key,
+                user_id=user_id,
+            )
+        # Unknown user — mint a minimal context so Bloom can
+        # still invoke the agent.  In production this should
+        # resolve a real upstream token; for the demo the
+        # agent does not need a valid bearer token.
         return OrchidAuthContext(
-            access_token=token,
+            access_token="",
             tenant_key=tenant_key,
             user_id=user_id,
         )
