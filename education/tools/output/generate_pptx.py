@@ -401,7 +401,7 @@ class GeneratePPTXTool(OrchidTool):
             generator = "fallback"
 
         filepath = str(_ensure_extension(str(parameters["filename"]), ".pptx"))
-        path, size = _write_content(
+        path, size, download_url = _write_content(
             pptx_bytes,
             filepath=filepath,
             mode="binary",
@@ -410,7 +410,7 @@ class GeneratePPTXTool(OrchidTool):
             auth_context=tool_input.auth_context,
         )
         return OrchidToolOutput(
-            result={"path": str(path), "size_bytes": size, "format": "pptx"},
+            result={"path": str(path), "size_bytes": size, "format": "pptx", "download_url": download_url},
             metadata={
                 "generator": generator,
                 "mime": "application/vnd.openxmlformats-officedocument.presentationml.presentation",

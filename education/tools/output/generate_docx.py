@@ -95,7 +95,7 @@ class GenerateDOCXTool(OrchidTool):
         stream = BytesIO()
         document.save(stream)
         filepath = str(_ensure_extension(str(parameters["filename"]), ".docx"))
-        path, size = _write_content(
+        path, size, download_url = _write_content(
             stream.getvalue(),
             filepath=filepath,
             mode="binary",
@@ -104,7 +104,7 @@ class GenerateDOCXTool(OrchidTool):
             auth_context=tool_input.auth_context,
         )
         return OrchidToolOutput(
-            result={"path": str(path), "size_bytes": size, "format": "docx"},
+            result={"path": str(path), "size_bytes": size, "format": "docx", "download_url": download_url},
             metadata={
                 "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             },
