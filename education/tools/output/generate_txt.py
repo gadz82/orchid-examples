@@ -27,7 +27,7 @@ class GenerateTXTTool(OrchidTool):
     async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
         parameters = tool_input.parameters
         filepath = str(_ensure_extension(str(parameters["filename"]), ".txt"))
-        path, size = _write_content(
+        path, size, download_url = _write_content(
             str(parameters["content"]),
             filepath=filepath,
             mode="text",
@@ -36,6 +36,6 @@ class GenerateTXTTool(OrchidTool):
             auth_context=tool_input.auth_context,
         )
         return OrchidToolOutput(
-            result={"path": str(path), "size_bytes": size, "format": "txt"},
+            result={"path": str(path), "size_bytes": size, "format": "txt", "download_url": download_url},
             metadata={"mime": "text/plain"},
         )

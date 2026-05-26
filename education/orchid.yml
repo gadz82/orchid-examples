@@ -11,8 +11,10 @@ agents:
   config_path: examples/education/agents.yaml
 
 llm:
-  model: ollama/llama3.2
-  ollama_api_base: http://host.docker.internal:11434
+  #model: ollama/llama3.2
+  #ollama_api_base: http://host.docker.internal:11434
+  model: gemini/gemini-flash-latest
+  gemini_api_key: ${GEMINI_API_KEY}
 
 auth:
   dev_bypass: true
@@ -21,10 +23,12 @@ auth:
 rag:
   vector_backend: qdrant
   qdrant_url: http://qdrant:6333
-  embedding_model: ollama/nomic-embed-text
+  #embedding_model: ollama/nomic-embed-text
+  embedding_model: gemini/gemini-embedding-001
+  gemini_api_key: ${GEMINI_API_KEY}
 
 upload:
-  vision_model: ollama/minicpm-v
+  #vision_model: ollama/minicpm-v
   namespace: education-uploads
   max_size_mb: 20
   chunk_size: 1000

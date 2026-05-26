@@ -27,7 +27,7 @@ class GenerateMarkdownTool(OrchidTool):
     async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
         parameters = tool_input.parameters
         filepath = str(_ensure_extension(str(parameters["filename"]), ".md"))
-        path, size = _write_content(
+        path, size, download_url = _write_content(
             str(parameters["content"]),
             filepath=filepath,
             mode="text",
@@ -36,6 +36,6 @@ class GenerateMarkdownTool(OrchidTool):
             auth_context=tool_input.auth_context,
         )
         return OrchidToolOutput(
-            result={"path": str(path), "size_bytes": size, "format": "md"},
+            result={"path": str(path), "size_bytes": size, "format": "md", "download_url": download_url},
             metadata={"mime": "text/markdown"},
         )

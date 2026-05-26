@@ -7,6 +7,10 @@ from typing import Any
 
 from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
 
+# URL prefix where the API mounts the export directory as static files.
+# Must match the mount point in orchid-api/main.py.
+_EXPORT_STATIC_MOUNT = "/exports"
+
 _DEFAULT_EXPORT_DIR = "orchid_exports"
 _SAFE_SEGMENT_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -85,7 +89,7 @@ def _write_content(
     context: dict[str, Any] | None = None,
     content_sources: Any = None,
     auth_context: Any = None,
-) -> tuple[Path, int]:
+) -> tuple[Path, int, str]:
     if mode not in {"text", "binary"}:
         raise ValueError(f"unsupported write mode: {mode!r}")
 
@@ -101,7 +105,13 @@ def _write_content(
         payload = content.decode("utf-8") if isinstance(content, (bytes, bytearray)) else str(content)
         target_path.write_text(payload, encoding="utf-8")
 
-    return target_path, target_path.stat().st_size
+    # Build absolute download URL against the API's static mount point.
+    # API_BASE_URL is set in docker-compose (defaults to http://localhost:8080).
+    relative = target_path.relative_to(export_root)
+    api_base = os.environ.get("API_BASE_URL", "").rstrip("/")
+    download_url = f"{api_base}{_EXPORT_STATIC_MOUNT}/{relative}"
+
+    return target_path, target_path.stat().st_size, download_url
 
 
 class WriteFileTool(OrchidTool):
@@ -131,7 +141,7 @@ class WriteFileTool(OrchidTool):
 
     async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
         parameters = tool_input.parameters
-        path, size = _write_content(
+        path, size, download_url = _write_content(
             parameters["content"],
             filepath=parameters["filepath"],
             mode=str(parameters.get("mode", "text")),
@@ -140,7 +150,7 @@ class WriteFileTool(OrchidTool):
             auth_context=tool_input.auth_context,
         )
         return OrchidToolOutput(
-            result={"path": str(path), "size_bytes": size},
+            result={"path": str(path), "size_bytes": size, "download_url": download_url},
             metadata={
                 "mode": str(parameters.get("mode", "text")),
                 "tenant_key": _resolve_tenant_key(tool_input.content_sources, tool_input.auth_context),
