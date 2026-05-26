@@ -83,8 +83,10 @@ def test_equivalence():
     for t_name in md_config.tools:
         md_t = md_config.tools[t_name]
         yaml_t = yaml_config.tools[t_name]
-        if md_t.handler != yaml_t.handler:
-            errors.append(f"  tool {t_name}.handler: {md_t.handler} vs {yaml_t.handler}")
+        md_ref = md_t.class_ or md_t.handler
+        yaml_ref = yaml_t.class_ or yaml_t.handler
+        if md_ref != yaml_ref:
+            errors.append(f"  tool {t_name}.ref: {md_ref} vs {yaml_ref}")
         if md_t.description != yaml_t.description:
             errors.append(f"  tool {t_name}.description mismatch")
 

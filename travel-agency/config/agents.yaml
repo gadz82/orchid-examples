@@ -53,116 +53,38 @@ guardrails:
 # ── Built-in tool declarations ────────────────────────────────
 tools:
   search_flights:
-    handler: "examples.travel-agency.tools.flights.search_flights"
+    class: "examples.travel-agency.tools.flights.SearchFlightsTool"
     description: "Search available flights by origin, destination, cabin, price cap."
-    parameters:
-      origin:
-        type: string
-        description: "Origin airport code (e.g. 'JFK', 'LAX')"
-        required: false
-        default: ""
-      destination:
-        type: string
-        description: "Destination airport code (e.g. 'LHR', 'CDG')"
-        required: false
-        default: ""
-      cabin:
-        type: string
-        description: "'economy' or 'business'"
-        required: false
-        default: ""
-      max_price_usd:
-        type: float
-        description: "Optional price cap in USD (0 = no limit)"
-        required: false
-        default: 0
 
   get_flight_details:
-    handler: "examples.travel-agency.tools.flights.get_flight_details"
+    class: "examples.travel-agency.tools.flights.GetFlightDetailsTool"
     description: "Look up details for a specific flight by flight number."
-    parameters:
-      flight_no:
-        type: string
-        description: "Flight number (e.g. 'AA101')"
-        required: true
 
   search_hotels:
-    handler: "examples.travel-agency.tools.hotels.search_hotels"
+    class: "examples.travel-agency.tools.hotels.SearchHotelsTool"
     description: "Search hotels by city, rating, price, and amenities."
-    parameters:
-      city:
-        type: string
-        description: "Destination city (e.g. 'London', 'Tokyo')"
-        required: false
-        default: ""
-      min_stars:
-        type: int
-        description: "Minimum star rating (0 = any)"
-        required: false
-        default: 0
-      max_nightly_usd:
-        type: float
-        description: "Maximum nightly price in USD (0 = no limit)"
-        required: false
-        default: 0
-      required_amenity:
-        type: string
-        description: "Required amenity (e.g. 'wifi', 'gym', 'spa')"
-        required: false
-        default: ""
 
   get_hotel_details:
-    handler: "examples.travel-agency.tools.hotels.get_hotel_details"
+    class: "examples.travel-agency.tools.hotels.GetHotelDetailsTool"
     description: "Look up details for a specific hotel by ID."
-    parameters:
-      hotel_id:
-        type: string
-        description: "Hotel ID (e.g. 'HTL-LON-001')"
-        required: true
 
   book_flight:
-    handler: "examples.travel-agency.tools.bookings.book_flight"
+    class: "examples.travel-agency.tools.bookings.BookFlightTool"
     description: "Confirm a flight booking for a passenger. Requires human approval."
     requires_approval: true   # ← HITL (Enhancement #7)
-    parameters:
-      flight_no:
-        type: string
-        required: true
-      passenger_name:
-        type: string
-        required: true
 
   book_hotel:
-    handler: "examples.travel-agency.tools.bookings.book_hotel"
+    class: "examples.travel-agency.tools.bookings.BookHotelTool"
     description: "Confirm a hotel booking for a guest. Requires human approval."
     requires_approval: true   # ← HITL (Enhancement #7)
-    parameters:
-      hotel_id:
-        type: string
-        required: true
-      guest_name:
-        type: string
-        required: true
-      check_in:
-        type: string
-        description: "Check-in date (YYYY-MM-DD)"
-        required: true
-      check_out:
-        type: string
-        description: "Check-out date (YYYY-MM-DD)"
-        required: true
 
   cancel_booking:
-    handler: "examples.travel-agency.tools.bookings.cancel_booking"
+    class: "examples.travel-agency.tools.bookings.CancelBookingTool"
     description: "Cancel an existing booking. Requires human approval."
     requires_approval: true
-    parameters:
-      booking_id:
-        type: string
-        required: true
 
   list_bookings:
-    handler: "examples.travel-agency.tools.bookings.list_bookings"
+    class: "examples.travel-agency.tools.bookings.ListBookingsTool"
     description: "List all bookings placed in this session."
 
 # ── Orchestrator-level skills ────────────────────────────────

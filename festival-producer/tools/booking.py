@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 _ARTISTS: dict[str, dict[str, Any]] = {
     "the midnight vibrations": {
         "name": "The Midnight Vibrations",
@@ -84,6 +86,15 @@ _ARTISTS: dict[str, dict[str, Any]] = {
 }
 
 
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
+
+
 def lookup_artist(artist_name: str = "", **kwargs: Any) -> dict[str, Any]:
     matches = [v for k, v in _ARTISTS.items() if artist_name.lower() in k or k in artist_name.lower()]
     if matches:
@@ -132,3 +143,85 @@ def compare_artists(artist_a: str = "", artist_b: str = "", **kwargs: Any) -> di
             "draw_advantage": "a" if a["avg_attendance_draw"] > b["avg_attendance_draw"] else "b",
         }
     }
+
+
+class LookupArtistTool(OrchidTool):
+    name = "lookup_artist"
+    description = "Look up an artist by name: genre, fee, availability, rider requirements"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "artist_name": {
+                "type": "string",
+                "description": "Artist name (e.g. 'The Midnight Vibrations')",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=lookup_artist(**_tool_kwargs(tool_input)))
+
+
+class ListAvailableArtistsTool(OrchidTool):
+    name = "list_available_artists"
+    description = "List artists available for a given quarter, optionally filtered by max fee"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "quarter": {
+                "type": "string",
+                "description": "Quarter to filter (e.g. 'Q2 2027')",
+                "default": "",
+            },
+            "max_fee": {
+                "type": "integer",
+                "description": "Maximum fee in USD",
+                "default": 150000,
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=list_available_artists(**_tool_kwargs(tool_input)))
+
+
+class GetRiderDetailsTool(OrchidTool):
+    name = "get_rider_details"
+    description = "Get technical rider: stage preference, power requirements, backstage needs"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "artist_name": {
+                "type": "string",
+                "description": "Artist name",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_rider_details(**_tool_kwargs(tool_input)))
+
+
+class CompareArtistsTool(OrchidTool):
+    name = "compare_artists"
+    description = "Compare two artists side-by-side: fee, draw, genre"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "artist_a": {
+                "type": "string",
+                "description": "First artist name",
+                "default": "",
+            },
+            "artist_b": {
+                "type": "string",
+                "description": "Second artist name",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=compare_artists(**_tool_kwargs(tool_input)))

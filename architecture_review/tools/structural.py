@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 _MATERIALS: dict[str, dict[str, Any]] = {
     "cross-laminated timber": {"strength_mpa": 24, "fire_rating_hours": 2, "carbon_kg_per_m3": -650, "cost_per_m2": 180, "span_limit_m": 12},
     "glulam beams": {"strength_mpa": 28, "fire_rating_hours": 1.5, "carbon_kg_per_m3": -580, "cost_per_m2": 150, "span_limit_m": 30},
@@ -10,6 +12,15 @@ _MATERIALS: dict[str, dict[str, Any]] = {
     "rammed earth": {"strength_mpa": 4, "fire_rating_hours": 4, "carbon_kg_per_m3": 50, "cost_per_m2": 300, "span_limit_m": 4},
     "hempcrete": {"strength_mpa": 1, "fire_rating_hours": 2, "carbon_kg_per_m3": -100, "cost_per_m2": 250, "span_limit_m": 3},
 }
+
+
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
 
 _CODES: dict[str, dict[str, Any]] = {
     "eurocode 2": {"jurisdiction": "EU", "material": "concrete", "key_constraints": "minimum cover 25mm, crack control to 0.3mm"},
@@ -71,3 +82,100 @@ def get_fire_strategy(material: str = "", floors: int = 0, **kwargs: Any) -> dic
         "evacuation_strategy": "defend-in-place" if floors > 6 else "simultaneous evacuation",
         "sprinkler_recommended": floors > 3 or (isinstance(rating, str)),
     }
+
+
+class AnalyzeStructureTool(OrchidTool):
+    name = "analyze_structure"
+    description = "Analyze structural requirements: load estimates, recommended systems, span limits"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "building_type": {
+                "type": "string",
+                "description": "Building type (e.g. 'office')",
+                "default": "",
+            },
+            "floors": {
+                "type": "integer",
+                "description": "Number of floors",
+                "default": 0,
+            },
+            "area_m2": {
+                "type": "integer",
+                "description": "Gross floor area in m2",
+                "default": 0,
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=analyze_structure(**_tool_kwargs(tool_input)))
+
+
+class CheckCodeComplianceTool(OrchidTool):
+    name = "check_code_compliance"
+    description = "Check building code compliance for a jurisdiction and material"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "jurisdiction": {
+                "type": "string",
+                "description": "Jurisdiction (e.g. 'EU', 'US', 'UK')",
+                "default": "",
+            },
+            "material": {
+                "type": "string",
+                "description": "Primary structural material",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=check_code_compliance(**_tool_kwargs(tool_input)))
+
+
+class CompareMaterialsTool(OrchidTool):
+    name = "compare_materials"
+    description = "Compare two structural materials: strength, carbon, cost, fire rating"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "material_a": {
+                "type": "string",
+                "description": "First material",
+                "default": "",
+            },
+            "material_b": {
+                "type": "string",
+                "description": "Second material",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=compare_materials(**_tool_kwargs(tool_input)))
+
+
+class GetFireStrategyTool(OrchidTool):
+    name = "get_fire_strategy"
+    description = "Get fire safety strategy: intrinsic rating, protection, evacuation"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "material": {
+                "type": "string",
+                "description": "Structural material",
+                "default": "",
+            },
+            "floors": {
+                "type": "integer",
+                "description": "Number of floors",
+                "default": 0,
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_fire_strategy(**_tool_kwargs(tool_input)))

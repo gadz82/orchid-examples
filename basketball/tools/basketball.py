@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 # ── Static player database ──────────────────────────────────────
 
 _PLAYERS: dict[str, dict[str, Any]] = {
@@ -133,6 +135,15 @@ for _key, _p in _PLAYERS.items():
     _TEAMS.setdefault(_team_lower, []).append(_key)
 
 
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
+
+
 def _find_player(name: str) -> dict[str, Any] | None:
     """Case-insensitive player lookup with partial matching."""
     key = name.strip().lower()
@@ -244,3 +255,62 @@ def get_team_roster(team_name: str = "", **kwargs: Any) -> list[dict[str, Any]]:
 
     available = sorted({p["team"] for p in _PLAYERS.values()})
     return [{"error": f"Team '{name}' not found", "available_teams": available}]
+
+
+class GetPlayerStatsTool(OrchidTool):
+    name = "get_player_stats"
+    description = "Get stats for an NBA player (points, rebounds, assists, team, position)"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "player_name": {
+                "type": "string",
+                "description": "Full or partial NBA player name to look up",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_player_stats(**_tool_kwargs(tool_input)))
+
+
+class ComparePlayersTool(OrchidTool):
+    name = "compare_players"
+    description = "Side-by-side comparison of two NBA players with advantage analysis"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "player_a": {
+                "type": "string",
+                "description": "Full or partial name of the first player",
+                "default": "",
+            },
+            "player_b": {
+                "type": "string",
+                "description": "Full or partial name of the second player",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=compare_players(**_tool_kwargs(tool_input)))
+
+
+class GetTeamRosterTool(OrchidTool):
+    name = "get_team_roster"
+    description = "Get all players on a given NBA team"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "team_name": {
+                "type": "string",
+                "description": "NBA team name (full or partial, e.g. 'Lakers')",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_team_roster(**_tool_kwargs(tool_input)))

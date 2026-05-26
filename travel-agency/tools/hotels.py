@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 _HOTELS: list[dict[str, Any]] = [
     {
         "hotel_id": "HTL-LON-001",
@@ -78,6 +80,15 @@ _HOTELS: list[dict[str, Any]] = [
 ]
 
 
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
+
+
 def search_hotels(
     city: str = "",
     min_stars: int = 0,
@@ -125,3 +136,54 @@ def get_hotel_details(hotel_id: str = "", **kwargs: Any) -> dict[str, Any]:
         "error": f"Hotel '{hid}' not found",
         "available_hotels": [h["hotel_id"] for h in _HOTELS],
     }
+
+
+class SearchHotelsTool(OrchidTool):
+    name = "search_hotels"
+    description = "Search hotels by city, rating, price, and amenities."
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "city": {
+                "type": "string",
+                "description": "Destination city (e.g. 'London', 'Tokyo')",
+                "default": "",
+            },
+            "min_stars": {
+                "type": "integer",
+                "description": "Minimum star rating (0 = any)",
+                "default": 0,
+            },
+            "max_nightly_usd": {
+                "type": "number",
+                "description": "Maximum nightly price in USD (0 = no limit)",
+                "default": 0,
+            },
+            "required_amenity": {
+                "type": "string",
+                "description": "Required amenity (e.g. 'wifi', 'gym', 'spa')",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=search_hotels(**_tool_kwargs(tool_input)))
+
+
+class GetHotelDetailsTool(OrchidTool):
+    name = "get_hotel_details"
+    description = "Look up details for a specific hotel by ID."
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "hotel_id": {
+                "type": "string",
+                "description": "Hotel ID (e.g. 'HTL-LON-001')",
+            },
+        },
+        "required": ["hotel_id"],
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_hotel_details(**_tool_kwargs(tool_input)))

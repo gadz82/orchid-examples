@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 # ── Motivation profiles (keyed by lowercase player name) ────────
 
 _MOTIVATION_PROFILES: dict[str, dict[str, Any]] = {
@@ -180,6 +182,15 @@ _STRATEGIES: dict[str, dict[str, Any]] = {
 }
 
 
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
+
+
 def _find_profile(name: str) -> dict[str, Any] | None:
     """Case-insensitive profile lookup with partial matching."""
     key = name.strip().lower()
@@ -319,3 +330,62 @@ def analyze_team_dynamics(team_name: str = "", **kwargs: Any) -> dict[str, Any]:
         "team": name.title(),
         **dynamics,
     }
+
+
+class AssessMotivationTool(OrchidTool):
+    name = "assess_motivation"
+    description = "Assess a player's motivation level, drive type, and risk factors"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "player_name": {
+                "type": "string",
+                "description": "Full or partial player name to assess",
+                "default": "",
+            },
+            "situation": {
+                "type": "string",
+                "description": "Current situation or context (e.g. 'playoff pressure', 'post-injury comeback')",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=assess_motivation(**_tool_kwargs(tool_input)))
+
+
+class SuggestMentalStrategyTool(OrchidTool):
+    name = "suggest_mental_strategy"
+    description = "Suggest mental performance strategies for a given situation (e.g. slump, pressure)"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "situation": {
+                "type": "string",
+                "description": "The situation to address (e.g. 'slump', 'pressure', 'confidence', 'team conflict')",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=suggest_mental_strategy(**_tool_kwargs(tool_input)))
+
+
+class AnalyzeTeamDynamicsTool(OrchidTool):
+    name = "analyze_team_dynamics"
+    description = "Analyze team chemistry, cohesion, and group motivation patterns"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "team_name": {
+                "type": "string",
+                "description": "NBA team name to analyze (full or partial)",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=analyze_team_dynamics(**_tool_kwargs(tool_input)))
