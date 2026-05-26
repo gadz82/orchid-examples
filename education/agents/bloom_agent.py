@@ -24,7 +24,7 @@ from orchid_ai.rag.scopes import OrchidRAGScope
 logger = logging.getLogger(__name__)
 
 _BLOOM_MARKER = "[bloom]"
-_CONTENT_THRESHOLD_CHARS = 5000  # only offload when source content exceeds this
+_CONTENT_THRESHOLD_CHARS = 200000  # only offload when source content exceeds this
 
 
 class EducationAgent(GenericAgent):
@@ -103,7 +103,7 @@ class EducationAgent(GenericAgent):
         state: OrchidAgentState,
         query: str,
     ) -> OrchidAgentState:
-        """Emit signal and return a background message."""
+        """Emit Bloom signal and return a placeholder — Bloom produces the real content."""
         try:
             await self.emit_signal(
                 "education.content_request",
@@ -115,20 +115,19 @@ class EducationAgent(GenericAgent):
                 self.name,
             )
         except Exception:
-            logger.exception(
-                "[%s] emit_signal failed — falling back to inline execution",
+            logger.info(
+                "[%s] emit_signal unavailable — running inline instead",
                 self.name,
             )
             return await super().run(state)
 
+        response_text = (
+            f"[{self.name.title()} Agent]\n"
+            "I've started generating your educational content "
+            "in the background. It will appear here shortly!"
+        )
         return {
-            "messages": [
-                AIMessage(
-                    content=(
-                        f"[{self.name.title()} Agent]\n"
-                        "I've started generating your educational content "
-                        "in the background. It will appear here shortly!"
-                    ),
-                ),
-            ],
+            "messages": [AIMessage(content=response_text)],
+            "final_response": response_text,
+            "pending_agents": [],
         }
