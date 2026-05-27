@@ -5,7 +5,7 @@ description = "Restaurant multi-agent demo for the Orchid framework (RAG + seque
 requires-python = ">=3.11"
 
 dependencies = [
-    "orchid-api>=1.5.0",
+    "orchid-api>=1.8.0",
     "orchid-rag-qdrant>=0.1.0",
 ]
 
