@@ -1,0 +1,29 @@
+# Dockerfile.frontend — builds orchid-frontend from GitHub
+#
+# Clones gadz82/orchid-frontend, installs Node deps, builds and starts.
+# This Dockerfile is shared across all examples.
+#
+# Build args:
+#   FRONTEND_REPO   — git clone URL (default: https://github.com/gadz82/orchid-frontend.git)
+#   FRONTEND_BRANCH — branch to check out (default: main)
+
+FROM node:20-slim AS base
+
+ARG FRONTEND_REPO=https://github.com/gadz82/orchid-frontend.git
+ARG FRONTEND_BRANCH=main
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 --branch ${FRONTEND_BRANCH} ${FRONTEND_REPO} .
+
+RUN npm ci
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN npm run build
+
+EXPOSE 3000
+
+CMD ["npm", "start"]

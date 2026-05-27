@@ -1,0 +1,2 @@
+orchid-storage-postgres>=0.1.0
+orchid-rag-qdrant>=0.1.0
