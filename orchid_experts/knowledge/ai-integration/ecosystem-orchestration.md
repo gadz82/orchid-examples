@@ -86,7 +86,7 @@ rag:
   embedding_model: ollama/nomic-embed-text
 
 storage:
-  class: orchid_ai.persistence.postgres.OrchidPostgresChatStorage
+  class: orchid_storage_postgres.OrchidPostgresChatStorage
   dsn: postgresql+asyncpg://...
 
 auth:
@@ -156,7 +156,7 @@ rag:
   vector_backend: qdrant
   qdrant_url: http://qdrant.cluster:6333
 storage:
-  class: orchid_ai.persistence.postgres.OrchidPostgresChatStorage
+  class: orchid_storage_postgres.OrchidPostgresChatStorage
   dsn: postgresql+asyncpg://orchid:${DB_PASSWORD}@postgres:5432/orchid
 auth:
   dev_bypass: false

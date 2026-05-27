@@ -11,6 +11,8 @@ from __future__ import annotations
 import random
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 # ── Static knowledge base ──────────────────────────────────────────
 
 _KB_ARTICLES: list[dict[str, Any]] = [
@@ -158,6 +160,15 @@ _PRIORITY_KEYWORDS: dict[str, list[str]] = {
     "medium": ["slow", "intermittent", "sometimes", "delay", "issue"],
     "low": ["question", "how to", "feature request", "suggestion", "minor"],
 }
+
+
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
 
 
 # ── Public tools ───────────────────────────────────────────────────
@@ -325,3 +336,57 @@ def search_kb(query: str = "", **kwargs: Any) -> dict[str, Any]:
         ],
         "total_matches": len(scored_articles),
     }
+
+
+class ClassifyTicketTool(OrchidTool):
+    name = "classify_ticket"
+    description = "Classify a support ticket by priority and category based on its description"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "description": {
+                "type": "string",
+                "description": "The support ticket description text to classify",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=classify_ticket(**_tool_kwargs(tool_input)))
+
+
+class GetTicketStatusTool(OrchidTool):
+    name = "get_ticket_status"
+    description = "Look up the current status and details of an existing support ticket"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "ticket_id": {
+                "type": "string",
+                "description": "The ticket ID to look up (e.g. 'TK-1001')",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_ticket_status(**_tool_kwargs(tool_input)))
+
+
+class SearchKBTool(OrchidTool):
+    name = "search_kb"
+    description = "Search the knowledge base for articles relevant to a technical issue"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Search query describing the technical issue",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=search_kb(**_tool_kwargs(tool_input)))

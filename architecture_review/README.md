@@ -52,8 +52,8 @@ vs "mass timber").
 ## Usage
 
 ```bash
-ORCHID_CONFIG=examples/architecture-review/orchid.yml uvicorn orchid_api.main:app
-orchid chat interactive --config examples/architecture-review/orchid.yml
+ORCHID_CONFIG=examples/architecture_review/orchid.yml uvicorn orchid_api.main:app
+orchid chat interactive --config examples/architecture_review/orchid.yml
 ```
 
 ## Example Conversations

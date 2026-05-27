@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 # ── Static flight inventory ────────────────────────────────────
 
 _FLIGHTS: list[dict[str, Any]] = [
@@ -80,6 +82,15 @@ _FLIGHTS: list[dict[str, Any]] = [
 ]
 
 
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
+
+
 def search_flights(
     origin: str = "",
     destination: str = "",
@@ -140,3 +151,54 @@ def get_flight_details(flight_no: str = "", **kwargs: Any) -> dict[str, Any]:
         "error": f"Flight '{fn}' not found",
         "available_flights": [f["flight_no"] for f in _FLIGHTS],
     }
+
+
+class SearchFlightsTool(OrchidTool):
+    name = "search_flights"
+    description = "Search available flights by origin, destination, cabin, price cap."
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "origin": {
+                "type": "string",
+                "description": "Origin airport code (e.g. 'JFK', 'LAX')",
+                "default": "",
+            },
+            "destination": {
+                "type": "string",
+                "description": "Destination airport code (e.g. 'LHR', 'CDG')",
+                "default": "",
+            },
+            "cabin": {
+                "type": "string",
+                "description": "'economy' or 'business'",
+                "default": "",
+            },
+            "max_price_usd": {
+                "type": "number",
+                "description": "Optional price cap in USD (0 = no limit)",
+                "default": 0,
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=search_flights(**_tool_kwargs(tool_input)))
+
+
+class GetFlightDetailsTool(OrchidTool):
+    name = "get_flight_details"
+    description = "Look up details for a specific flight by flight number."
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "flight_no": {
+                "type": "string",
+                "description": "Flight number (e.g. 'AA101')",
+            },
+        },
+        "required": ["flight_no"],
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_flight_details(**_tool_kwargs(tool_input)))

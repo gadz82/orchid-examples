@@ -1,0 +1,43 @@
+# orchid.yml — PostgreSQL storage example
+#
+# Demonstrates orchid-storage-postgres plugin: chat persistence (asyncpg),
+# PostgreSQL checkpointer, visibility fragment, and Qdrant RAG.
+#
+# Usage:
+#   ORCHID_CONFIG=examples/postgres-storage/orchid.yml uvicorn orchid_api.main:app
+#
+# Or via docker-compose:
+#   script/start_postgres_storage.sh
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  config_path: examples/postgres-storage/agents.yaml
+
+# ── LLM ───────────────────────────────────────────────────────
+llm:
+  model: ollama/llama3.2
+  ollama_api_base: http://host.docker.internal:11434
+
+# ── Auth ──────────────────────────────────────────────────────
+auth:
+  dev_bypass: true
+
+# ── RAG / Vector DB ───────────────────────────────────────────
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  embedding_model: ollama/nomic-embed-text
+
+# ── Chat persistence (PostgreSQL via orchid-storage-postgres) ─
+storage:
+  class: orchid_storage_postgres.OrchidPostgresChatStorage
+  dsn: postgresql://orchid:${POSTGRES_PASSWORD:-orchid}@postgres:5432/orchid
+
+# ── Checkpointer (PostgreSQL, bundled with orchid-storage-postgres) ─
+checkpointer:
+  type: postgres
+  dsn: postgresql://orchid:${POSTGRES_PASSWORD:-orchid}@postgres:5432/orchid
+
+# ── Observability ─────────────────────────────────────────────
+tracing:
+  langsmith_tracing: false

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 # -- Static menu database ---------------------------------------------------
 
 _MENU: dict[str, dict[str, Any]] = {
@@ -111,6 +113,15 @@ _DAILY_SPECIALS = [
 ]
 
 
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
+
+
 def _match_items(query: str, dietary_filter: str = "") -> list[dict[str, Any]]:
     """Return menu items matching query text and optional dietary filter."""
     query_lower = query.strip().lower()
@@ -188,3 +199,41 @@ def get_daily_specials(**kwargs: Any) -> dict[str, Any]:
         "count": len(_DAILY_SPECIALS),
         "note": "Daily specials are available while supplies last. Ask your server for details.",
     }
+
+
+class SearchMenuTool(OrchidTool):
+    name = "search_menu"
+    description = (
+        "Search the restaurant menu by keyword and dietary preference "
+        "(vegetarian, vegan, gluten-free, etc.)"
+    )
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "Keyword to search for in menu items (e.g. 'pasta', 'salmon', 'dessert')",
+                "default": "",
+            },
+            "dietary_filter": {
+                "type": "string",
+                "description": (
+                    "Dietary preference filter: vegetarian, vegan, gluten-free, "
+                    "dairy-free, or high-protein"
+                ),
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=search_menu(**_tool_kwargs(tool_input)))
+
+
+class GetDailySpecialsTool(OrchidTool):
+    name = "get_daily_specials"
+    description = "Get today's daily specials with prices and availability"
+    parameters_schema = {"type": "object", "properties": {}}
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_daily_specials(**_tool_kwargs(tool_input)))

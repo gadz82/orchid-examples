@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 _DEMOGRAPHICS: dict[str, dict[str, Any]] = {
     "indie rock": {"age_range": "18-35", "gender_split": "55% M / 45% F", "avg_ticket_price_sensitivity": "medium", "social_platforms": ["Instagram", "TikTok", "Spotify"]},
     "electronic": {"age_range": "18-28", "gender_split": "60% M / 40% F", "avg_ticket_price_sensitivity": "low", "social_platforms": ["TikTok", "Instagram", "SoundCloud"]},
@@ -26,6 +28,15 @@ _CHANNELS: list[dict[str, Any]] = [
     {"name": "Influencer Partnerships", "cost_estimate": "2K-15K per partnership", "best_for": "credibility, niche genre communities"},
     {"name": "Local Radio", "cost_estimate": "1K-5K per station", "best_for": "regional awareness, last-minute ticket push"},
 ]
+
+
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
 
 
 def analyze_demographics(genre: str = "", **kwargs: Any) -> dict[str, Any]:
@@ -86,3 +97,85 @@ def project_attendance(lineup_size: int = 10, avg_draw: int = 12000, **kwargs: A
             for name, tier in list(_PRICING_TIERS.items())[:2]
         },
     }
+
+
+class AnalyzeDemographicsTool(OrchidTool):
+    name = "analyze_demographics"
+    description = "Analyze target demographics for a music genre"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "genre": {
+                "type": "string",
+                "description": "Music genre (e.g. 'indie rock')",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=analyze_demographics(**_tool_kwargs(tool_input)))
+
+
+class GetPricingStrategyTool(OrchidTool):
+    name = "get_pricing_strategy"
+    description = "Get pricing strategy: early bird, general, late, VIP tiers with revenue projections"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "estimated_attendance": {
+                "type": "integer",
+                "description": "Estimated total attendance",
+                "default": 15000,
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_pricing_strategy(**_tool_kwargs(tool_input)))
+
+
+class RecommendChannelsTool(OrchidTool):
+    name = "recommend_channels"
+    description = "Recommend marketing channels based on lineup genres and budget"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "genres": {
+                "type": "string",
+                "description": "Comma-separated genres (e.g. 'indie rock,electronic')",
+                "default": "",
+            },
+            "budget": {
+                "type": "integer",
+                "description": "Marketing budget in USD",
+                "default": 50000,
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=recommend_channels(**_tool_kwargs(tool_input)))
+
+
+class ProjectAttendanceTool(OrchidTool):
+    name = "project_attendance"
+    description = "Project attendance based on lineup size and average artist draw"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "lineup_size": {
+                "type": "integer",
+                "description": "Number of artists on the lineup",
+                "default": 10,
+            },
+            "avg_draw": {
+                "type": "integer",
+                "description": "Average attendance draw per artist",
+                "default": 12000,
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=project_attendance(**_tool_kwargs(tool_input)))

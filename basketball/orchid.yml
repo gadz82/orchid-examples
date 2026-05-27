@@ -38,8 +38,8 @@ upload:
 
 # ── Chat persistence ─────────────────────────────────────────
 storage:
-  class: examples.basketball.storage.sqlite.OrchidSQLiteChatStorage
-  dsn: /data/chats.db
+  class: orchid_storage_postgres.OrchidPostgresChatStorage
+  dsn: postgresql://orchid:${POSTGRES_PASSWORD:-orchid}@postgres:5432/orchid
 
 # ── Observability ─────────────────────────────────────────────
 tracing:

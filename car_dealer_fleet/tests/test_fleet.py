@@ -213,16 +213,16 @@ def test_config_storage_defaults_to_sqlite():
     assert cfg.dsn == "~/.orchid/chats.db"
 
 
-def test_config_storage_accepts_postgres_override():
-    """OrchidConfigStorageConfig allows overriding to PostgreSQL."""
+def test_config_storage_accepts_custom_class_path():
+    """OrchidConfigStorageConfig supports custom class_path overrides."""
     from orchid_ai.config.schema_storage import OrchidConfigStorageConfig
 
     cfg = OrchidConfigStorageConfig(
         enabled=True,
-        class_path="orchid_ai.persistence.config_postgres.OrchidPostgresConfigStorage",
+        class_path="examples.my_storage.MyPostgresConfigStorage",
         dsn="postgresql://localhost/db",
     )
-    assert "Postgres" in cfg.class_path
+    assert "MyPostgresConfigStorage" in cfg.class_path
 
 
 # ═══════════════════════════════════════════════════════════════

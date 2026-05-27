@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 _VENUES: dict[str, dict[str, Any]] = {
     "main stage": {
         "name": "Main Stage",
@@ -54,6 +56,15 @@ _VENUES: dict[str, dict[str, Any]] = {
         "lighting_rig": "Full laser rig + UV + haze (dedicated hazers)",
     },
 }
+
+
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
 
 _SCHEDULE_SLOTS: dict[str, dict[str, Any]] = {
     "friday 18:00": {"stage": "main stage", "confirmed": None, "status": "open"},
@@ -129,3 +140,66 @@ def get_crew_requirements(stage_count: int = 0, **kwargs: Any) -> dict[str, Any]
         },
         "note": "Estimates assume medium-production festival. Scale up for headline acts with complex riders.",
     }
+
+
+class CheckVenueAvailabilityTool(OrchidTool):
+    name = "check_venue_availability"
+    description = "Check venue availability: capacity, open slots, power grid specs"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "stage_name": {
+                "type": "string",
+                "description": "Stage name (e.g. 'main stage')",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=check_venue_availability(**_tool_kwargs(tool_input)))
+
+
+class GetScheduleOverviewTool(OrchidTool):
+    name = "get_schedule_overview"
+    description = "Get full schedule overview: confirmed bookings and open slots across all stages"
+    parameters_schema = {"type": "object", "properties": {}}
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_schedule_overview(**_tool_kwargs(tool_input)))
+
+
+class EstimatePowerBudgetTool(OrchidTool):
+    name = "estimate_power_budget"
+    description = "Estimate power budget for a stage based on confirmed artists"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "stage_name": {
+                "type": "string",
+                "description": "Stage name",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=estimate_power_budget(**_tool_kwargs(tool_input)))
+
+
+class GetCrewRequirementsTool(OrchidTool):
+    name = "get_crew_requirements"
+    description = "Estimate crew needs: sound engineers, lighting techs, security, medical"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "stage_count": {
+                "type": "integer",
+                "description": "Number of active stages",
+                "default": 0,
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_crew_requirements(**_tool_kwargs(tool_input)))

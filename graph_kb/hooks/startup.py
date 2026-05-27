@@ -103,7 +103,7 @@ async def bootstrap_graph_kb(
     graph_store = InMemoryGraphStore()
     seed_scope = OrchidRAGScope(
         tenant_id="__shared__",
-        user_id="seed",
+        user_id="",
         chat_id="",
         agent_id="",
     )

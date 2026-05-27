@@ -81,17 +81,19 @@ Uses a `_migrations` table to track applied migrations. The `SQLiteMigrationRunn
 - Recording new migrations after execution.
 - Supporting rollback via `remove_version()`.
 
-## Built-in PostgreSQL Implementation
+## PostgreSQL Storage Plugin
 
-**File:** `persistence/postgres.py`
+`OrchidPostgresChatStorage` is provided by the `orchid-storage-postgres` plugin package.  Install it alongside `orchid-ai`:
 
-`OrchidPostgresChatStorage` uses `asyncpg` for async PostgreSQL access. Available with `orchid-ai[postgres]`.
+```bash
+pip install orchid-storage-postgres
+```
 
 ### Configuration
 
 ```yaml
 storage:
-  class: orchid_ai.persistence.postgres.OrchidPostgresChatStorage
+  class: orchid_storage_postgres.OrchidPostgresChatStorage
   dsn: postgresql+asyncpg://user:pass@localhost:5432/orchid
 ```
 
@@ -101,6 +103,7 @@ storage:
 - Connection pooling via `asyncpg`.
 - Automatic migration execution on `init_db()`.
 - Suitable for multi-replica deployments.
+- Includes PostgreSQL checkpointer (bundled) and visibility fragment.
 
 ## Migration System
 

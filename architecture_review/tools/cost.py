@@ -2,6 +2,17 @@ from __future__ import annotations
 
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
+
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
+
 
 def estimate_construction_cost(building_type: str = "", area_m2: int = 0, quality: str = "medium", **kwargs: Any) -> dict[str, Any]:
     rates: dict[str, dict[str, int]] = {
@@ -65,3 +76,72 @@ def get_market_rates(region: str = "", **kwargs: Any) -> dict[str, Any]:
     if not r:
         return {"error": f"No data for region '{region}'", "available_regions": list(regions)}
     return {"region": region, **r}
+
+
+class EstimateConstructionCostTool(OrchidTool):
+    name = "estimate_construction_cost"
+    description = "Estimate construction cost by building type, area, and quality tier"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "building_type": {
+                "type": "string",
+                "description": "Building type",
+                "default": "",
+            },
+            "area_m2": {
+                "type": "integer",
+                "description": "Gross floor area in m2",
+                "default": 0,
+            },
+            "quality": {
+                "type": "string",
+                "description": "Quality tier: low, medium, high",
+                "default": "medium",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=estimate_construction_cost(**_tool_kwargs(tool_input)))
+
+
+class CompareLifecycleCostsTool(OrchidTool):
+    name = "compare_lifecycle_costs"
+    description = "Compare lifecycle costs: initial, maintenance, 30-year total"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "material": {
+                "type": "string",
+                "description": "Structural material",
+                "default": "",
+            },
+            "area_m2": {
+                "type": "integer",
+                "description": "Area in m2",
+                "default": 0,
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=compare_lifecycle_costs(**_tool_kwargs(tool_input)))
+
+
+class GetMarketRatesTool(OrchidTool):
+    name = "get_market_rates"
+    description = "Get regional market rates: labour, materials, planning timeline"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "region": {
+                "type": "string",
+                "description": "City or region",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_market_rates(**_tool_kwargs(tool_input)))

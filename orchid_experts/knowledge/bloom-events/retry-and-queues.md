@@ -12,7 +12,7 @@ The Pollen+Bloom system uses a two-level retry architecture: queue-level retry f
 |---------|-------------|
 | `InMemorySignalQueue` | Non-durable queue for tests/demos. |
 | `SQLiteSignalQueue` | Durable queue for single-process deployments. |
-| `PostgresSignalQueue` | Durable queue with `FOR UPDATE SKIP LOCKED` for multi-process. |
+| `PostgresSignalQueue` | Durable queue with `FOR UPDATE SKIP LOCKED` for multi-process (available via orchid-storage-postgres plugin). |
 | `RelayingSignalQueue` | Publish-then-mark adapter for external buses. |
 
 ### Queue Configuration
@@ -20,7 +20,8 @@ The Pollen+Bloom system uses a two-level retry architecture: queue-level retry f
 ```yaml
 events:
   queue:
-    class: orchid_ai.events.queues.postgres.PostgresSignalQueue
+    # class: orchid_storage_postgres.queue.PostgresSignalQueue  # install orchid-storage-postgres plugin
+    class: orchid_ai.events.queues.sqlite.SQLiteSignalQueue
     notify_enabled: true
     poll_interval_ms: 200
     lease_seconds: 30

@@ -18,8 +18,8 @@ that analyses specification documents.
   Orchid (reader → summariser via skill) → JSON agent configs → SQLite
   → `merge_from_db()` → compiled graph with N specialised experts.
 - **Framework-level SQLite config storage** — uses `OrchidSQLiteConfigStorage`
-  from `orchid_ai.persistence.config_sqlite`, the new built-in SQLite backend
-  for `OrchidConfigStorage` (mirrors `OrchidPostgresConfigStorage`).
+  for ``OrchidConfigStorage`` (SQLite built-in; PostgreSQL config storage
+  available via orchid-storage-postgres plugin).
 - **Clean slate on every bootstrap** — existing agents are deleted and recreated,
   so adding/removing documents automatically reshapes the fleet.
 - **Self-contained experts** — each generated agent carries its domain knowledge

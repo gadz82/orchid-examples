@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 _CERTIFICATIONS: dict[str, dict[str, Any]] = {
     "breeam": {"levels": ["Pass", "Good", "Very Good", "Excellent", "Outstanding"], "focus": "Europe", "key_categories": ["Energy", "Water", "Materials", "Ecology", "Pollution"]},
     "leed": {"levels": ["Certified", "Silver", "Gold", "Platinum"], "focus": "North America", "key_categories": ["Energy & Atmosphere", "Materials", "Indoor Quality", "Water", "Location"]},
@@ -26,6 +28,15 @@ _STRATEGIES: list[dict[str, Any]] = [
     {"name": "Rainwater harvesting", "savings_percent": 30, "applicable_to": "all", "upfront_cost": "medium"},
     {"name": "Dynamic solar shading", "savings_percent": 15, "applicable_to": "south/west facades", "upfront_cost": "medium"},
 ]
+
+
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
 
 
 def evaluate_certification(certification: str = "", target_level: str = "", area_m2: int = 0, **kwargs: Any) -> dict[str, Any]:
@@ -96,3 +107,95 @@ def compare_carbon_footprints(options: str = "", **kwargs: Any) -> dict[str, Any
     if not results:
         return {"error": "No valid material-volume pairs provided", "format": "material1 100, material2 200"}
     return {"comparison": results, "winner": min(results.items(), key=lambda x: x[1]["net_kgco2"])[0]}
+
+
+class EvaluateCertificationTool(OrchidTool):
+    name = "evaluate_certification"
+    description = "Evaluate sustainability certification: BREEAM, LEED, DGNB, WELL"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "certification": {
+                "type": "string",
+                "description": "Certification name",
+                "default": "",
+            },
+            "target_level": {
+                "type": "string",
+                "description": "Target level (e.g. 'Gold')",
+                "default": "",
+            },
+            "area_m2": {
+                "type": "integer",
+                "description": "Area in m2 for cost estimation",
+                "default": 0,
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=evaluate_certification(**_tool_kwargs(tool_input)))
+
+
+class CalculateEmbodiedCarbonTool(OrchidTool):
+    name = "calculate_embodied_carbon"
+    description = "Calculate embodied and biogenic carbon for a material volume"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "material": {
+                "type": "string",
+                "description": "Material name",
+                "default": "",
+            },
+            "volume_m3": {
+                "type": "integer",
+                "description": "Volume in m3",
+                "default": 0,
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=calculate_embodied_carbon(**_tool_kwargs(tool_input)))
+
+
+class GetSustainabilityStrategiesTool(OrchidTool):
+    name = "get_sustainability_strategies"
+    description = "Get sustainability strategies: passive design, renewables, water"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "building_type": {
+                "type": "string",
+                "description": "Building type",
+                "default": "",
+            },
+            "climate_zone": {
+                "type": "string",
+                "description": "Climate zone",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=get_sustainability_strategies(**_tool_kwargs(tool_input)))
+
+
+class CompareCarbonFootprintsTool(OrchidTool):
+    name = "compare_carbon_footprints"
+    description = "Compare carbon footprints of material-volume pairs (format: 'material1 100, material2 200')"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "options": {
+                "type": "string",
+                "description": "Comma-separated material-volume pairs",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=compare_carbon_footprints(**_tool_kwargs(tool_input)))

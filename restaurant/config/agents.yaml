@@ -57,63 +57,23 @@ guardrails:
 # ── Built-in tools ────────────────────────────────────────────
 tools:
   search_menu:
-    handler: "examples.restaurant.tools.menu.search_menu"
+    class: "examples.restaurant.tools.menu.SearchMenuTool"
     description: "Search the restaurant menu by keyword and dietary preference (vegetarian, vegan, gluten-free, etc.)"
-    parameters:
-      query:
-        type: string
-        description: "Keyword to search for in menu items (e.g. 'pasta', 'salmon', 'dessert')"
-        required: false
-        default: ""
-      dietary_filter:
-        type: string
-        description: "Dietary preference filter: vegetarian, vegan, gluten-free, dairy-free, or high-protein"
-        required: false
-        default: ""
   get_daily_specials:
-    handler: "examples.restaurant.tools.menu.get_daily_specials"
+    class: "examples.restaurant.tools.menu.GetDailySpecialsTool"
     description: "Get today's daily specials with prices and availability"
   place_order:
-    handler: "examples.restaurant.tools.orders.place_order"
+    class: "examples.restaurant.tools.orders.PlaceOrderTool"
     description: "Place a new order with comma-separated item names and optional table number"
-    parameters:
-      items:
-        type: string
-        description: "Comma-separated list of menu item names to order"
-        required: false
-        default: ""
-      table_number:
-        type: int
-        description: "Table number for dine-in (0 for takeout)"
-        required: false
-        default: 0
   get_order_status:
-    handler: "examples.restaurant.tools.orders.get_order_status"
+    class: "examples.restaurant.tools.orders.GetOrderStatusTool"
     description: "Check the current status and details of an existing order by order ID"
-    parameters:
-      order_id:
-        type: string
-        description: "The order ID to look up (e.g. 'ORD-1001')"
-        required: false
-        default: ""
   calculate_bill:
-    handler: "examples.restaurant.tools.orders.calculate_bill"
+    class: "examples.restaurant.tools.orders.CalculateBillTool"
     description: "Calculate the itemized bill for an order including tax and service charge"
-    parameters:
-      order_id:
-        type: string
-        description: "The order ID to calculate the bill for"
-        required: false
-        default: ""
   analyze_sentiment:
-    handler: "examples.restaurant.tools.reviews.analyze_sentiment"
+    class: "examples.restaurant.tools.reviews.AnalyzeSentimentTool"
     description: "Analyze the sentiment of a customer review text (score, keywords, star rating)"
-    parameters:
-      text:
-        type: string
-        description: "Customer review text to analyze for sentiment"
-        required: false
-        default: ""
 
 # ── Orchestrator-level skills (cross-agent) ───────────────────
 skills:

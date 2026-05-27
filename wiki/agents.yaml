@@ -36,7 +36,7 @@ defaults:
 # ── Built-in tools (ADR-017) ─────────────────────────────────
 tools:
   lookup_glossary:
-    handler: examples.wiki.hooks.tools.lookup_glossary
+    class: examples.wiki.hooks.tools.LookupGlossaryTool
     description: >
       Fetch a term's definition from the glossary store.  Results are
       cached into RAG so future ``hybrid`` lookups can pull definitions
@@ -54,11 +54,6 @@ tools:
       retrieval:
         # Glossary lookups don't need the dense+sparse fan-out.
         strategy: simple
-    parameters:
-      term:
-        type: string
-        description: "The term to look up."
-        required: true
 
 # ── Agents ───────────────────────────────────────────────────
 agents:

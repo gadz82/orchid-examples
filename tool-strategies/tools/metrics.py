@@ -10,6 +10,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 
 async def metric_a(**_: Any) -> dict[str, Any]:
     """Pretend to read metric A from a fast read replica."""
@@ -27,3 +29,30 @@ async def metric_c(**_: Any) -> dict[str, Any]:
     """Pretend to read metric C from a fast read replica."""
     await asyncio.sleep(0.05)
     return {"metric": "c", "value": 3.14}
+
+
+class MetricATool(OrchidTool):
+    name = "metric_a"
+    description = "Read-only fast metric A. Safe for parallel dispatch."
+    parameters_schema = {"type": "object", "properties": {}}
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=await metric_a())
+
+
+class MetricBTool(OrchidTool):
+    name = "metric_b"
+    description = "Read-only fast metric B. Safe for parallel dispatch."
+    parameters_schema = {"type": "object", "properties": {}}
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=await metric_b())
+
+
+class MetricCTool(OrchidTool):
+    name = "metric_c"
+    description = "Read-only fast metric C. Safe for parallel dispatch."
+    parameters_schema = {"type": "object", "properties": {}}
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=await metric_c())

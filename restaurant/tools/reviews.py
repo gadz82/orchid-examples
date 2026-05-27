@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from orchid_ai.core.tool import OrchidTool, OrchidToolInput, OrchidToolOutput
+
 # -- Simple keyword-based sentiment scoring (mock) --------------------------
 
 _POSITIVE_WORDS = {
@@ -25,6 +27,15 @@ _NEGATIVE_WORDS = {
     "disappointing", "bland", "tasteless", "greasy", "wait", "waited",
     "dirty", "noisy", "overpriced", "raw", "burnt", "soggy",
 }
+
+
+def _tool_kwargs(tool_input: OrchidToolInput) -> dict[str, Any]:
+    kwargs = dict(tool_input.parameters)
+    kwargs.setdefault("query", tool_input.query)
+    kwargs.setdefault("context", tool_input.context)
+    kwargs.setdefault("auth_context", tool_input.auth_context)
+    kwargs.setdefault("content_sources", tool_input.content_sources)
+    return kwargs
 
 
 def analyze_sentiment(text: str = "", **kwargs: Any) -> dict[str, Any]:
@@ -101,3 +112,21 @@ def analyze_sentiment(text: str = "", **kwargs: Any) -> dict[str, Any]:
         "summary": f"{sentiment.capitalize()} review ({stars}/5 stars). "
                    f"Found {pos_count} positive and {neg_count} negative indicators.",
     }
+
+
+class AnalyzeSentimentTool(OrchidTool):
+    name = "analyze_sentiment"
+    description = "Analyze the sentiment of a customer review text (score, keywords, star rating)"
+    parameters_schema = {
+        "type": "object",
+        "properties": {
+            "text": {
+                "type": "string",
+                "description": "Customer review text to analyze for sentiment",
+                "default": "",
+            },
+        },
+    }
+
+    async def invoke(self, tool_input: OrchidToolInput) -> OrchidToolOutput:
+        return OrchidToolOutput(result=analyze_sentiment(**_tool_kwargs(tool_input)))

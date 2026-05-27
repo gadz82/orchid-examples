@@ -1,0 +1,75 @@
+# docker-compose.yml — Restaurant example
+#
+# Services: agents-api, qdrant, frontend, orchid-mcp
+# Storage: SQLite (no postgres needed)
+#
+# Usage:
+#   cp .env.example .env  # fill in your API keys
+#   docker compose up --build
+#
+# API:    http://localhost:8080
+# UI:     http://localhost:3000
+# MCP:    http://localhost:9000/mcp
+
+services:
+
+  # ── Qdrant ──────────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports: ["6333:6333"]
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  # ── Agents API ──────────────────────────────────────────────
+  agents-api:
+    build:
+      context: .
+    ports: ["8080:8000"]
+    depends_on:
+      qdrant:
+        condition: service_started
+    env_file: .env
+    environment:
+      ORCHID_CONFIG: examples/restaurant/config/orchid.yml
+    volumes:
+      - chat_data:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+
+  # ── Frontend ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ../_docker
+      dockerfile: Dockerfile.frontend
+    ports: ["3000:3000"]
+    environment:
+      AGENTS_API_URL: http://agents-api:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    depends_on:
+      agents-api:
+        condition: service_healthy
+
+  # ── Orchid MCP gateway ──────────────────────────────────────
+  orchid-mcp:
+    build:
+      context: ../_docker
+      dockerfile: Dockerfile.mcp
+    ports: ["9000:9000"]
+    depends_on:
+      agents-api:
+        condition: service_healthy
+    environment:
+      ORCHID_MCP_ORCHID_API_URL: http://agents-api:8000
+      ORCHID_MCP_SERVICE_ACCOUNT_TOKEN: ${MCP_TOKEN:-demo-token}
+      ORCHID_MCP_I_UNDERSTAND_THE_RISK: "true"
+      ORCHID_MCP_LOG_LEVEL: info
+
+volumes:
+  qdrant_data:
+  chat_data:
