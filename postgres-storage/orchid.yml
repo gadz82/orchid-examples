@@ -31,12 +31,12 @@ rag:
 # ── Chat persistence (PostgreSQL via orchid-storage-postgres) ─
 storage:
   class: orchid_storage_postgres.OrchidPostgresChatStorage
-  dsn: postgresql://postgres:postgres@postgres:5432/orchid
+  dsn: postgresql://orchid:${POSTGRES_PASSWORD:-orchid}@postgres:5432/orchid
 
 # ── Checkpointer (PostgreSQL, bundled with orchid-storage-postgres) ─
 checkpointer:
   type: postgres
-  dsn: postgresql://postgres:postgres@postgres:5432/orchid
+  dsn: postgresql://orchid:${POSTGRES_PASSWORD:-orchid}@postgres:5432/orchid
 
 # ── Observability ─────────────────────────────────────────────
 tracing:
