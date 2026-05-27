@@ -1,6 +1,6 @@
 # Dockerfile.mcp — runs orchid-mcp gateway from the published npm package
 #
-# Installs @orchid-ai/orchi-mcp from npm (NOT a local build).
+# Installs @orchid-ai/orchid-mcp from npm (NOT a local build).
 # Configure via env vars:
 #   ORCHID_MCP_ORCHID_API_URL  — URL of the orchid-api container
 #   ORCHID_MCP_SERVICE_ACCOUNT_TOKEN — bearer token (any value when dev_bypass=true)
@@ -18,4 +18,4 @@ ENV ORCHID_MCP_I_UNDERSTAND_THE_RISK=true
 
 EXPOSE 9000
 
-CMD ["node", "node_modules/@orchid-ai/mcp/dist/index.js"]
+CMD ["node", "node_modules/@orchid-ai/orchid-mcp/dist/index.js"]
