@@ -65,6 +65,7 @@ services:
       dockerfile: Dockerfile.frontend
     ports: ["3000:3000"]
     environment:
+      AGENTS_API_URL: http://agents-api:8000
       NEXT_PUBLIC_API_URL: http://localhost:8080
     depends_on:
       agents-api:
