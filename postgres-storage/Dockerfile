@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir --prefix=/install \
-    "orchid-api>=1.5.0" \
+    "orchid-api>=1.8.0" \
     -r requirements.txt
 
 # ── Stage 2: runtime ──────────────────────────────────────────
