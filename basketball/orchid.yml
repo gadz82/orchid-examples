@@ -39,7 +39,7 @@ upload:
 # ── Chat persistence ─────────────────────────────────────────
 storage:
   class: orchid_storage_postgres.OrchidPostgresChatStorage
-  dsn: postgresql://orchid:${POSTGRES_PASSWORD:-orchid}@postgres:5432/orchid
+  dsn: postgresql://orchid:${POSTGRES_PASSWORD}@postgres:5432/orchid
 
 # ── Observability ─────────────────────────────────────────────
 tracing:

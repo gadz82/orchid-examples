@@ -4,13 +4,16 @@
 # This Dockerfile is shared across all examples.
 #
 # Build args:
-#   FRONTEND_REPO   — git clone URL (default: https://github.com/gadz82/orchid-frontend.git)
-#   FRONTEND_BRANCH — branch to check out (default: main)
+#   FRONTEND_REPO            — git clone URL (default: https://github.com/gadz82/orchid-frontend.git)
+#   FRONTEND_BRANCH          — branch to check out (default: main)
+#   NEXT_PUBLIC_DEV_AUTH_BYPASS — inlined at build time for client bundle (default: true)
 
 FROM node:20-slim AS base
 
 ARG FRONTEND_REPO=https://github.com/gadz82/orchid-frontend.git
 ARG FRONTEND_BRANCH=main
+ARG NEXT_PUBLIC_DEV_AUTH_BYPASS=true
+ENV NEXT_PUBLIC_DEV_AUTH_BYPASS=${NEXT_PUBLIC_DEV_AUTH_BYPASS}
 
 WORKDIR /app
 

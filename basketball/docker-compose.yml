@@ -49,6 +49,8 @@ services:
     env_file: .env
     environment:
       ORCHID_CONFIG: examples/basketball/orchid.yml
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orchid}
+      CHAT_DB_DSN: postgresql://orchid:${POSTGRES_PASSWORD:-orchid}@postgres:5432/orchid
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
@@ -63,10 +65,17 @@ services:
     build:
       context: ../_docker
       dockerfile: Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_DEV_AUTH_BYPASS: "true"
     ports: ["3000:3000"]
     environment:
+      AUTH_SECRET: ${AUTH_SECRET:-dev-auth-secret-change-in-prod}
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      DEV_AUTH_BYPASS: "true"
+      NEXT_PUBLIC_DEV_AUTH_BYPASS: "true"
       AGENTS_API_URL: http://agents-api:8000
-      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_AGENTS_API_URL: http://localhost:8080
     depends_on:
       agents-api:
         condition: service_healthy

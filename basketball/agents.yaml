@@ -127,7 +127,7 @@ agents:
     execution_hints:
       parallel_safe: true
 
-  notifications:
+  trivia_generator:
     description: >
       Lightweight content-generation agent used by the morning-trivia
       Pollen + Bloom example.  Receives a prompt template at fire time
@@ -272,7 +272,7 @@ events:
     - id: morning-trivia
       "on": { signal: cron, cron: "0 7 * * 1-5" }
       emits:
-        agent: notifications
+        agent: trivia_generator
         prompt_template: |
           Produce a 3-fact NBA trivia digest based on yesterday's games.
           Each fact must cite the source game.  Format as Markdown.
