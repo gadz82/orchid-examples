@@ -75,7 +75,7 @@ services:
       DEV_AUTH_BYPASS: "true"
       NEXT_PUBLIC_DEV_AUTH_BYPASS: "true"
       AGENTS_API_URL: http://agents-api:8000
-      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_AGENTS_API_URL: http://localhost:8080
     depends_on:
       agents-api:
         condition: service_healthy
