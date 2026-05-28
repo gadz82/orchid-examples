@@ -1,2 +1,7 @@
+# Pin the framework with the heavy extras the API needs at runtime.
+# ``[documents]`` enables PDF / DOCX / XLSX uploads through orchid-api's
+# multipart endpoints; ``[events]`` enables the APScheduler-backed
+# triggers declared in ``agents.yaml`` (events: enabled: true).
+orchid-ai[documents,events]>=1.8.3
 orchid-storage-postgres>=0.1.0
 orchid-rag-qdrant>=0.1.0

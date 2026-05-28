@@ -21,7 +21,11 @@ version = "0.1.0"
 description = "Example showing how to add custom FastAPI endpoints to orchid-api."
 requires-python = ">=3.11"
 dependencies = [
-    "orchid-ai",
+    # Pull the extras orchid-api already exercises so the example
+    # plugin runs against the same dep matrix as the host server.
+    # ``[documents]`` covers multipart uploads; ``[events]`` covers
+    # any APScheduler-backed triggers the host config might enable.
+    "orchid-ai[documents,events]",
     "orchid-api",
     "fastapi",
     "pydantic",

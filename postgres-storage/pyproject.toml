@@ -6,6 +6,10 @@ requires-python = ">=3.11"
 
 dependencies = [
     "orchid-api>=1.8.0",
+    # ``[documents]`` enables PDF / DOCX / XLSX uploads through
+    # orchid-api's multipart endpoints.  This example doesn't enable
+    # events so the ``[events]`` extra is intentionally omitted.
+    "orchid-ai[documents]>=1.8.3",
     "orchid-rag-qdrant>=0.1.0",
     "orchid-storage-postgres>=0.1.0",
 ]
