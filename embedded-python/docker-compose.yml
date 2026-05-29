@@ -1,0 +1,22 @@
+# docker-compose.yml — Embedded Python example
+#
+# Services: qdrant (infrastructure only)
+# This example runs scripts directly (not an API server).
+# Use docker compose to start Qdrant, then run scripts on the host.
+#
+# Usage:
+#   cp .env.example .env
+#   docker compose up -d qdrant
+#   pip install orchid-ai orchid-rag-qdrant
+#   python examples/embedded-python/01_minimal.py
+
+services:
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports: ["6333:6333"]
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+volumes:
+  qdrant_data:
