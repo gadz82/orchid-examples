@@ -119,7 +119,7 @@ async def build_expert_fleet(
         return
 
     db_dsn = os.path.expanduser(
-        _resolve_setting(settings, "CHAT_DB_DSN", "~/.orchid/car_dealer_fleet.db")
+        _resolve_setting(settings, "CHAT_DB_DSN", "~/.orchid/car-dealer-fleet.db")
     )
     model = _resolve_setting(settings, "LITELLM_MODEL", "ollama/llama3.2")
 
