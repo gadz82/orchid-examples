@@ -12,7 +12,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir --prefix=/install \
-    "orchid-api>=1.8.0" \
+    "orchid-api>=1.8.2" \
     "orchid-rag-qdrant>=0.1.0" \
     -r requirements.txt
 

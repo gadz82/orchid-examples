@@ -5,11 +5,11 @@ description = "Education multi-agent demo for the Orchid framework (quiz/lesson 
 requires-python = ">=3.11"
 
 dependencies = [
-    "orchid-api>=1.8.0",
+    "orchid-api>=1.8.2",
     # ``[documents]`` enables PDF / DOCX / XLSX uploads through
     # orchid-api's multipart endpoints; ``[events]`` enables the
     # APScheduler-backed triggers declared in agents.yaml.
-    "orchid-ai[documents,events]>=1.8.3",
+    "orchid-ai[documents,events]>=1.8.6",
     "orchid-rag-qdrant>=0.1.0",
     "reportlab>=4.0",
     "python-pptx>=1.0",

@@ -5,7 +5,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir --prefix=/install \
-    "orchid-api>=1.8.0" \
+    "orchid-api>=1.8.2" \
     -r requirements.txt
 
 FROM python:3.13-slim
