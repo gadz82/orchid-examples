@@ -103,6 +103,7 @@ async def build_expert_fleet(
     reader: Any,
     settings: Any,
     runtime: Any,
+    agents_config: Any = None,
     **kwargs: Any,
 ) -> None:
     """Startup hook — read content, analyse, create specialised agents.
@@ -118,8 +119,17 @@ async def build_expert_fleet(
         logger.warning("[FleetBuilder] No content sources — skipping")
         return
 
+    # Prefer the config_storage DSN from agents.yaml so the hook writes
+    # to the same file that merge_from_db() reads from.  Fall back to
+    # the env var / hardcoded default only when config_storage is absent.
+    config_storage_dsn = (
+        getattr(getattr(agents_config, "config_storage", None), "dsn", None)
+        if agents_config is not None
+        else None
+    )
     db_dsn = os.path.expanduser(
-        _resolve_setting(settings, "CHAT_DB_DSN", "~/.orchid/car-dealer-fleet.db")
+        config_storage_dsn
+        or _resolve_setting(settings, "CHAT_DB_DSN", "~/.orchid/car-dealer-fleet.db")
     )
     model = _resolve_setting(settings, "LITELLM_MODEL", "ollama/llama3.2")
 
