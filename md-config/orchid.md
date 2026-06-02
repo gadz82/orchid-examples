@@ -39,7 +39,7 @@ upload:
   chunk_overlap: 200
 
 storage:
-  class: examples.basketball.storage.sqlite.OrchidSQLiteChatStorage
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
   dsn: /data/chats.db
 
 tracing:

@@ -35,7 +35,7 @@ upload:
 
 # ── Chat persistence ─────────────────────────────────────────
 storage:
-  class: examples.basketball.storage.sqlite.OrchidSQLiteChatStorage
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
   dsn: /data/chats.db
 
 # ── Observability ─────────────────────────────────────────────

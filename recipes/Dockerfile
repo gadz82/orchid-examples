@@ -1,3 +1,11 @@
+# Dockerfile — Recipes example
+#
+# Multi-agent demo: recipe management with Chroma RAG.
+# Build context: examples/recipes/
+#   docker build -t orchid-recipes .
+#
+# Used by docker-compose.yml in this directory.
+
 FROM python:3.13-slim AS builder
 
 WORKDIR /app
@@ -8,12 +16,14 @@ RUN pip install --no-cache-dir --prefix=/install \
     "orchid-api>=1.8.2" \
     -r requirements.txt
 
+# ── Stage 2: runtime ──────────────────────────────────────────
 FROM python:3.13-slim
 
 WORKDIR /app
 
 COPY --from=builder /install /usr/local
 
+# Copy the example package into /app/examples/recipes/
 COPY . examples/recipes
 
 ENV PYTHONDONTWRITEBYTECODE=1

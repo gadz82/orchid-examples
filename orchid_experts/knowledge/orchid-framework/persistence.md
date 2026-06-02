@@ -61,7 +61,7 @@ The abstract interface for chat session and message CRUD. All persistence backen
 
 ```yaml
 storage:
-  class: examples.basketball.storage.sqlite.OrchidSQLiteChatStorage
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
   dsn: /data/chats.db
 ```
 

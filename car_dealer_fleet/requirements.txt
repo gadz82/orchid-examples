@@ -1,1 +1,2 @@
-# No extra dependencies beyond orchid-api
+# Framework deps for orchid-api runtime
+orchid-ai[documents]>=1.8.3

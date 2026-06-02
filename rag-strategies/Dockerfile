@@ -1,3 +1,11 @@
+# Dockerfile — RAG Strategies example
+#
+# Demonstrates RAG strategy patterns (recency, relevance, hybrid) in Orchid.
+# Build context: examples/rag-strategies/
+#   docker build -t orchid-rag-strategies .
+#
+# Used by docker-compose.yml in this directory.
+
 FROM python:3.13-slim AS builder
 
 WORKDIR /app
@@ -8,12 +16,14 @@ RUN pip install --no-cache-dir --prefix=/install \
     "orchid-api>=1.8.2" \
     -r requirements.txt
 
+# ── Stage 2: runtime ──────────────────────────────────────────
 FROM python:3.13-slim
 
 WORKDIR /app
 
 COPY --from=builder /install /usr/local
 
+# Copy the example package into /app/examples/rag-strategies/
 COPY . examples/rag-strategies
 
 ENV PYTHONDONTWRITEBYTECODE=1

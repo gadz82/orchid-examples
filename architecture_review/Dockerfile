@@ -1,3 +1,11 @@
+# Dockerfile — Architecture Review example
+#
+# Multi-agent demo: structural, cost, and sustainability analysis with Qdrant RAG.
+# Build context: examples/architecture_review/
+#   docker build -t orchid-architecture-review .
+#
+# Used by docker-compose.yml in this directory.
+
 FROM python:3.13-slim AS builder
 
 WORKDIR /app
@@ -8,12 +16,14 @@ RUN pip install --no-cache-dir --prefix=/install \
     "orchid-api>=1.8.2" \
     -r requirements.txt
 
+# ── Stage 2: runtime ──────────────────────────────────────────
 FROM python:3.13-slim
 
 WORKDIR /app
 
 COPY --from=builder /install /usr/local
 
+# Copy the example package into /app/examples/architecture_review/
 COPY . examples/architecture_review
 
 ENV PYTHONDONTWRITEBYTECODE=1

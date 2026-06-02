@@ -1,3 +1,11 @@
+# Dockerfile — Markdown Config example
+#
+# Demonstrates Markdown-based YAML config with events (APScheduler triggers) and Qdrant RAG.
+# Build context: examples/md-config/
+#   docker build -t orchid-md-config .
+#
+# Used by docker-compose.yml in this directory.
+
 FROM python:3.13-slim AS builder
 
 WORKDIR /app
@@ -8,12 +16,14 @@ RUN pip install --no-cache-dir --prefix=/install \
     "orchid-api>=1.8.2" \
     -r requirements.txt
 
+# ── Stage 2: runtime ──────────────────────────────────────────
 FROM python:3.13-slim
 
 WORKDIR /app
 
 COPY --from=builder /install /usr/local
 
+# Copy the example package into /app/examples/md-config/
 COPY . examples/md-config
 
 ENV PYTHONDONTWRITEBYTECODE=1

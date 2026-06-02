@@ -1,3 +1,11 @@
+# Dockerfile — Orchid Experts example
+#
+# Multi-agent demo: expert system with Qdrant RAG.
+# Build context: examples/orchid_experts/
+#   docker build -t orchid-orchid-experts .
+#
+# Used by docker-compose.yml in this directory.
+
 FROM python:3.13-slim AS builder
 
 WORKDIR /app
@@ -8,12 +16,14 @@ RUN pip install --no-cache-dir --prefix=/install \
     "orchid-api>=1.8.2" \
     -r requirements.txt
 
+# ── Stage 2: runtime ──────────────────────────────────────────
 FROM python:3.13-slim
 
 WORKDIR /app
 
 COPY --from=builder /install /usr/local
 
+# Copy the example package into /app/examples/orchid_experts/
 COPY . examples/orchid_experts
 
 ENV PYTHONDONTWRITEBYTECODE=1

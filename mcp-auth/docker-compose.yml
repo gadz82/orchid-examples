@@ -37,8 +37,11 @@ services:
       dockerfile: Dockerfile.frontend
     ports: ["3000:3000"]
     environment:
+      AUTH_SECRET: ${AUTH_SECRET:-dev-auth-secret-change-in-prod}
+      AUTH_TRUST_HOST: "true"
+      DEV_AUTH_BYPASS: "true"
       AGENTS_API_URL: http://agents-api:8000
-      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_AGENTS_API_URL: http://localhost:8080
     depends_on:
       agents-api:
         condition: service_healthy

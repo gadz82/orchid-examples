@@ -1,3 +1,11 @@
+# Dockerfile — Tech Conference example
+#
+# Multi-agent demo: tech conference planning with Qdrant RAG.
+# Build context: examples/tech_conference/
+#   docker build -t orchid-tech-conference .
+#
+# Used by docker-compose.yml in this directory.
+
 FROM python:3.13-slim AS builder
 
 WORKDIR /app
@@ -8,12 +16,14 @@ RUN pip install --no-cache-dir --prefix=/install \
     "orchid-api>=1.8.2" \
     -r requirements.txt
 
+# ── Stage 2: runtime ──────────────────────────────────────────
 FROM python:3.13-slim
 
 WORKDIR /app
 
 COPY --from=builder /install /usr/local
 
+# Copy the example package into /app/examples/tech_conference/
 COPY . examples/tech_conference
 
 ENV PYTHONDONTWRITEBYTECODE=1
