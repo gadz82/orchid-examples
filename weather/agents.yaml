@@ -1,0 +1,243 @@
+# agents.yaml — Weather agentic fleet configuration
+#
+# Showcases:
+#   - Remote MCP server (weather-mcp) integrated via ``type: remote``
+#   - Built-in tools for clothing/safety recommendations
+#   - Custom OutfitAdvisorAgent subclass (``class:`` path)
+#   - RAG chat summarization (sliding-window compression)
+#   - Cross-agent orchestrator skills (prepare_for_day, emergency_check)
+#   - Postgres storage, Qdrant vector DB
+#
+# Activate via::
+#
+#   AGENTS_CONFIG_PATH=examples/weather/agents.yaml
+#
+# Agents:
+#   - weather-forecast — queries remote MCP server for forecast/current weather
+#   - weather-alerts   — detects extreme conditions from forecast, suggests safety measures
+#   - outfit-advisor   — custom agent using RAG + summarisation for clothing advice
+
+version: "1"
+
+defaults:
+  llm:
+    model: "ollama/llama3.2"
+    temperature: 0.2
+  rag:
+    enabled: false                     # Per-agent RAG is disabled by default
+    retrieval:
+      strategy: simple
+
+# ── Supervisor ────────────────────────────────────────────────
+supervisor:
+  assistant_name: "Weather Assistant"
+  streaming_enabled: true
+  # ── Sliding-window summarization ───────────────────────────
+  # Compresses older conversation turns via an LLM summary,
+  # keeping only the most recent `recent_turns` exchanges verbatim.
+  # Reduces context window pressure on long weather-planning chats.
+  history_summary_enabled: true
+  history_summary_recent_turns: 10
+  history_max_turns: 30
+  history_max_chars: 2000
+
+# ── Global guardrails ────────────────────────────────────────
+guardrails:
+  input:
+    - type: prompt_injection
+      fail_action: block
+    - type: max_length
+      fail_action: block
+      config:
+        max_characters: 8000
+  output:
+    - type: pii_detection
+      fail_action: redact
+      config:
+        entities: [email, phone, ssn]
+
+# ── Built-in tool declarations ────────────────────────────────
+tools:
+  recommend_outfit:
+    class: "examples.weather.tools.clothing.RecommendOutfitTool"
+    description: >
+      Recommend clothing and outfit combinations based on weather conditions
+      (temperature, precipitation, wind, UV index) and activity type.
+      Returns layered outfit suggestions with reasoning.
+
+  get_safety_tips:
+    class: "examples.weather.tools.safety.GetSafetyTipsTool"
+    description: >
+      Get safety recommendations and preparedness tips for specific
+      weather hazards (heatwaves, storms, floods, blizzards, hurricanes,
+      extreme cold). Returns actionable safety guidance.
+
+  assess_weather_risk:
+    class: "examples.weather.tools.safety.AssessWeatherRiskTool"
+    description: >
+      Assess the risk level (low/moderate/high/extreme) of current or
+      forecasted weather conditions. Considers temperature extremes,
+      wind speeds, precipitation intensity, and storm risk.
+
+# ── Orchestrator-level skills (cross-agent) ───────────────────
+skills:
+  prepare_for_day:
+    description: >
+      Full morning briefing: get the weather forecast, check for any
+      alerts or extreme conditions, and recommend an appropriate outfit.
+      Runs weather-forecast → weather-alerts → outfit-advisor in sequence.
+    steps:
+      - agent: weather-forecast
+        instruction: >
+          Get the current weather and multi-day forecast for the user's
+          location. Include temperature, precipitation chance, wind,
+          humidity, and UV index. Ask for the city if not provided.
+      - agent: weather-alerts
+        instruction: >
+          Review the forecast from the previous step. Check for any
+          extreme weather conditions (heatwave, storm, blizzard, flood
+          risk, etc.). If dangerous conditions exist, explain the risk
+          and provide safety recommendations. If conditions are mild,
+          just confirm the forecast looks normal.
+      - agent: outfit-advisor
+        instruction: >
+          Based on the weather forecast and any alerts from the previous
+          steps, recommend a full outfit (top, bottom, footwear,
+          outerwear, accessories). Consider the temperature, rain chance,
+          wind, and whether outdoor activities are safe.
+
+  emergency_check:
+    description: >
+      Emergency weather assessment: get the latest forecast and immediately
+      check for hazardous conditions. If dangerous weather is detected,
+      provide a safety plan with evacuation routes and shelter locations.
+    steps:
+      - agent: weather-forecast
+        instruction: >
+          Get the current weather conditions and immediate forecast
+          (next 24 hours) for the user's location. Focus on any
+          active weather warnings or rapid weather changes.
+      - agent: weather-alerts
+        instruction: >
+          Immediately assess the forecast data for safety risks.
+          If dangerous conditions are present, provide a detailed
+          safety plan including what to do, where to shelter, and
+          emergency supplies needed. Be direct and actionable.
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  # ── Weather Forecast Agent ─────────────────────────────────
+  weather-forecast:
+    description: >
+      Weather forecast specialist. Uses a remote MCP server to query
+      live weather data including multi-day forecasts, current conditions,
+      temperature, precipitation, wind, humidity, and UV index.
+      Use for any weather-related question.
+
+    prompt: |
+      You are a Weather Forecast specialist AI assistant.
+      You have access to live weather data via MCP tools.
+
+      Given the user's question, use the available weather tools to:
+      - Get the current weather conditions
+      - Provide multi-day forecasts
+      - Explain weather patterns in plain language
+      - Note any notable weather changes in the coming days
+
+      Always include:
+      - Temperature (high/low/feels-like)
+      - Precipitation chance and type
+      - Wind speed and direction
+      - Humidity level
+      - UV index when relevant
+
+      Format your response clearly with sections for each day.
+      Suggest a city name if the user doesn't specify one.
+
+    mcp_servers:
+      - name: weather-api
+        type: remote
+        url: "http://weather-mcp:3002/mcp"
+        tools: "*"
+        # No auth required — Open-Meteo is a free public API
+        auth:
+          mode: none
+
+  # ── Weather Alerts Agent ───────────────────────────────────
+  weather-alerts:
+    description: >
+      Extreme weather and safety specialist. Monitors forecasts for
+      hazardous conditions (heatwaves, storms, floods, blizzards,
+      hurricanes) and provides actionable safety recommendations.
+      Uses both MCP weather tools and built-in safety tools.
+
+    prompt: |
+      You are a Weather Safety specialist AI assistant.
+      You have access to live weather data and safety knowledge.
+
+      Given weather forecast data, your job is to:
+      - Identify any hazardous or extreme weather conditions
+      - Assess the risk level (low, moderate, high, extreme)
+      - Provide specific, actionable safety recommendations
+      - Explain what precautions to take
+      - List emergency supplies if needed
+
+      Weather hazards to watch for:
+      - Heatwaves: temperatures above 35°C (95°F)
+      - Extreme cold: temperatures below -15°C (5°F)
+      - Heavy rain/flooding: >50mm in 24h
+      - Strong winds: >50 km/h (31 mph)
+      - Thunderstorms: lightning, hail, tornado risk
+      - Winter storms: heavy snow, ice, blizzard conditions
+
+      Be calm but direct. If conditions are dangerous, clearly state so.
+      If conditions are normal, provide a reassuring summary.
+
+    tools: [get_safety_tips, assess_weather_risk]
+
+    mcp_servers:
+      - name: weather-api
+        type: remote
+        url: "http://weather-mcp:3002/mcp"
+        tools: "*"
+        auth:
+          mode: none
+
+  # ── Outfit Advisor Agent ───────────────────────────────────
+  outfit-advisor:
+    description: >
+      Clothing and outfit recommendation specialist. Uses weather data
+      to suggest appropriate clothing, footwear, and accessories.
+      Considers temperature, precipitation, wind, UV, and activity type.
+      Backed by RAG knowledge base of clothing guidelines.
+
+    prompt: |
+      You are an Outfit Advisor AI assistant.
+      You specialise in recommending clothing based on weather conditions.
+
+      Given weather data, suggest:
+      - Tops: t-shirt, long-sleeve, sweater, etc.
+      - Bottoms: shorts, pants, jeans, etc.
+      - Footwear: sandals, sneakers, boots, waterproof, etc.
+      - Outerwear: jacket, coat, rain jacket, umbrella, etc.
+      - Accessories: hat, sunglasses, scarf, gloves, sunscreen, etc.
+
+      Consider:
+      - Temperature: layer appropriately
+      - Rain/snow: waterproof gear needed?
+      - Wind: windbreaker or extra layers?
+      - UV: sun protection needed?
+      - Activity: casual, business, outdoor sports?
+
+      Give clear, specific recommendations with reasoning.
+
+    class: examples.weather.agents.outfit.OutfitAdvisorAgent
+
+    rag:
+      namespace: clothing-guides
+      enabled: true
+      k: 3
+      retrieval:
+        strategy: simple
+
+    tools: [recommend_outfit]

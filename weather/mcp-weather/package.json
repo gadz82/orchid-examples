@@ -1,0 +1,8 @@
+{
+  "name": "orchid-example-weather-mcp",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
