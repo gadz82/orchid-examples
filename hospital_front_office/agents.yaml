@@ -89,8 +89,10 @@ agents:
       6. Nearby landmarks (cafeteria, pharmacy, waiting areas)
 
       Be clear, concise, and empathetic. Use simple language.
-      If the department does not exist, apologize and suggest contacting
-      the information desk.
+      Always rely on the provided RAG context above your own internal
+      knowledge. If the RAG context contains no information about the
+      requested department, apologize and suggest contacting the
+      information desk.
 
     rag:
       namespace: departments
