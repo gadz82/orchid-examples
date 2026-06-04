@@ -10,7 +10,7 @@
 #           uvicorn orchid_api.main:app --port 8000
 
 agents:
-  config_path: examples/restaurant/config/agents.yaml  # reuse restaurant for demo
+  config_path: examples/api-extensions/agents.yaml
 
 llm:
   model: gemini/gemini-flash-latest

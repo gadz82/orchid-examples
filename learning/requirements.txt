@@ -1,2 +1,2 @@
 # Framework deps for orchid-api runtime (events enabled for APScheduler triggers)
-orchid-ai[documents,events]>=1.8.3
+orchid-ai[documents,events]>=1.8.4

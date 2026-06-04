@@ -1,2 +1,2 @@
 # Framework deps for orchid-api runtime
-orchid-ai[documents]>=1.8.3
+orchid-ai[documents]>=1.8.4

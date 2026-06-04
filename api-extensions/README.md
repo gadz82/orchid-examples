@@ -25,7 +25,8 @@ routers, so your custom endpoints inherit the app's Bearer-token flow for free.
 ```
 examples/api-extensions/
 ├── README.md
-├── orchid.yml             # shared config (reuses restaurant example)
+├── orchid.yml             # app config (points at this example's agents.yaml)
+├── agents.yaml            # minimal self-contained agent config
 ├── pyproject.toml         # declares entry-point plugin (Pattern B)
 ├── custom_app.py          # Pattern A entry point
 └── routers/

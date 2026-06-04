@@ -1,0 +1,31 @@
+# agents.yaml — api-extensions example
+#
+# Minimal, self-contained config. The point of this example is the custom
+# FastAPI admin endpoints (see routers/admin.py), not the agents themselves,
+# so a single YAML-only GenericAgent is enough. No consumer Python modules
+# are referenced, which keeps the Docker image self-contained.
+version: "1"
+
+defaults:
+  llm:
+    model: "gemini/gemini-flash-latest"
+    temperature: 0.3
+  rag:
+    enabled: false
+
+supervisor:
+  assistant_name: "Orchid API Extensions"
+  system_prompt: |
+    You are a helpful assistant for the API Extensions demo.
+    Answer the user's questions clearly and concisely.
+
+agents:
+  assistant:
+    description: >
+      General-purpose assistant. Answers user questions and serves as the
+      target agent for the custom admin API endpoints in this example.
+    prompt: |
+      You are a helpful, concise assistant.
+    rag:
+      namespace: api_extensions
+      k: 5

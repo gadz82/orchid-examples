@@ -2,6 +2,6 @@
 # ``[documents]`` enables PDF / DOCX / XLSX uploads through orchid-api's
 # multipart endpoints.  This example doesn't enable events so the
 # ``[events]`` extra is omitted.
-orchid-ai[documents]>=1.8.3
+orchid-ai[documents]>=1.8.4
 orchid-storage-postgres>=0.1.0
 orchid-rag-qdrant>=0.1.0

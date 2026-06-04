@@ -2,7 +2,7 @@
 # ``[documents]`` enables PDF / DOCX / XLSX uploads through orchid-api's
 # multipart endpoints; ``[events]`` enables the APScheduler-backed
 # triggers declared in ``agents.yaml`` (events: enabled: true).
-orchid-ai[documents,events]>=1.8.3
+orchid-ai[documents,events]>=1.8.4
 # Example-specific tools for multi-format export (lesson-builder agent).
 reportlab>=4.0
 python-pptx>=1.0
