@@ -11,8 +11,7 @@
 #
 # Or via the CLI::
 #
-#   orchid chat send "Who does Bob report to?" \
-#     --agent org_chart \
+#   orchid chat send mychat "Who does Bob report to?" \
 #     --config examples/graph_kb/orchid.yml
 
 # ── Agent config ─────────────────────────────────────────────
@@ -32,6 +31,13 @@ rag:
   vector_backend: qdrant
   qdrant_url: http://qdrant:6333
   embedding_model: gemini/gemini-embedding-001  # 3072-d
+
+# ── CLI-specific RAG override ────────────────────────────────
+# When the CLI is used, this section replaces rag: above.
+# ChromaDB runs on-disk (no Docker), ollama embeddings run locally.
+cli_rag:
+  vector_backend: chroma
+  embedding_model: ollama/nomic-embed-text   # 768-d, runs locally
 
 # ── Document upload ──────────────────────────────────────────
 upload:

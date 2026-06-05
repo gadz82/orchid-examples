@@ -38,12 +38,10 @@ ORCHID_CONFIG=examples/graph_kb/orchid.yml \
 Or via CLI:
 
 ```bash
-orchid chat send "Who reports to Alice?" \
-  --agent org_chart \
+orchid chat send mychat "Who reports to Alice?" \
   --config examples/graph_kb/orchid.yml
 
-orchid chat send "Which projects does Dave work on?" \
-  --agent org_chart \
+orchid chat send mychat "Which projects does Dave work on?" \
   --config examples/graph_kb/orchid.yml
 ```
 
