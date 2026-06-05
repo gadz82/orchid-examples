@@ -1,9 +1,9 @@
 # agents.yaml — api-extensions example
 #
-# Minimal, self-contained config. The point of this example is the custom
-# FastAPI admin endpoints (see routers/admin.py), not the agents themselves,
-# so a single YAML-only GenericAgent is enough. No consumer Python modules
-# are referenced, which keeps the Docker image self-contained.
+# Self-contained config (no consumer Python modules → image stays self-contained).
+# The point of this example is the custom FastAPI admin endpoints (see
+# routers/admin.py); the agents below are simple YAML-only GenericAgents that
+# also make supervisor routing visible in the chat UI.
 version: "1"
 
 defaults:
@@ -16,16 +16,48 @@ defaults:
 supervisor:
   assistant_name: "Orchid API Extensions"
   system_prompt: |
-    You are a helpful assistant for the API Extensions demo.
-    Answer the user's questions clearly and concisely.
+    You route the user's request to the best specialist agent.
+    Prefer dispatching an agent over answering directly: pick `sql_helper`
+    for anything about SQL/databases/queries, `api_designer` for anything
+    about HTTP/REST APIs/endpoints, and `assistant` for everything else.
+    Only answer directly for trivial meta questions about this demo.
 
 agents:
+  # ── SQL specialist ───────────────────────────────────────────
+  sql_helper:
+    description: >
+      SQL and database specialist. Writes, explains, and optimises SQL
+      queries (SELECT/INSERT/UPDATE/DELETE, JOINs, filtering, aggregation)
+      for MySQL, PostgreSQL, SQLite. Route here for ANY database/query request.
+    prompt: |
+      You are a SQL specialist. Write correct, well-formatted SQL for the
+      user's request. State assumptions about table/column names, show the
+      query in a fenced ```sql block, and add one short note on usage.
+    execution_hints:
+      parallel_safe: true
+
+  # ── REST API designer ────────────────────────────────────────
+  api_designer:
+    description: >
+      REST/HTTP API design specialist. Designs endpoints, request/response
+      shapes, status codes, and example payloads. Route here for ANY request
+      about building, designing, or documenting an API or endpoint.
+    prompt: |
+      You are a REST API designer. Propose concrete endpoints (method + path),
+      request/response JSON, and status codes. Keep it practical and minimal;
+      show examples in fenced code blocks.
+    execution_hints:
+      parallel_safe: true
+
+  # ── General fallback ─────────────────────────────────────────
   assistant:
     description: >
-      General-purpose assistant. Answers user questions and serves as the
-      target agent for the custom admin API endpoints in this example.
+      General-purpose assistant for anything not about SQL or API design.
+      Also the target agent for the custom admin API endpoints in this example.
     prompt: |
       You are a helpful, concise assistant.
     rag:
       namespace: api_extensions
       k: 5
+    execution_hints:
+      parallel_safe: true
