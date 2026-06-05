@@ -50,7 +50,7 @@ class EducationAgent(GenericAgent):
         return await super().run(state)
 
     async def _is_content_long(self, state: OrchidAgentState) -> bool:
-        auth: OrchidAuthContext | None = state.get("auth_context")
+        auth: OrchidAuthContext | None = self._current_auth
         if not auth:
             return False
         query = self.extract_user_query(state)

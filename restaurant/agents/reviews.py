@@ -64,7 +64,7 @@ class ReviewsAgent(OrchidAgent):
             state["final_response"] = "I need a review or question about reviews to analyze."
             return state
 
-        auth = state.get("auth_context")
+        auth = self._current_auth
 
         # -- Step 1: Retrieve historical review context from RAG --------
         rag_docs: list[dict[str, Any]] = []

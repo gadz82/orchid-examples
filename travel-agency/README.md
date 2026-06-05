@@ -99,7 +99,7 @@ orchid chat interactive --config examples/travel-agency/config/orchid.yml
 Attach `OrchidMetricsHandler` to any graph invocation to collect per-request metrics:
 
 ```python
-from orchid_ai import OrchidMetricsHandler
+from orchid_ai.observability import OrchidMetricsHandler
 
 handler = OrchidMetricsHandler()
 result = await graph.ainvoke(

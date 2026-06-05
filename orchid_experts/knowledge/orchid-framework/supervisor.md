@@ -119,7 +119,8 @@ skills:
 The supervisor is built into the LangGraph by `build_graph()`:
 
 ```python
-from orchid_ai import build_graph, load_config, OrchidRuntime
+from orchid_ai import load_config, OrchidRuntime
+from orchid_ai.graph.graph import build_graph  # low-level factory; the Orchid facade calls it for you
 
 config = load_config("agents.yaml")
 runtime = OrchidRuntime(default_model="ollama/llama3.2")

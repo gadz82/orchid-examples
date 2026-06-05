@@ -78,10 +78,10 @@ Invokes the LangGraph supervisor under the synthesized auth context:
 class JobRunner:
     async def run(self, job_spec: JobSpec, signal: Signal) -> JobRun:
         auth_context = await self._synthesise_auth(job_spec.identity, signal)
-        result = await self._graph.ainvoke({
-            "messages": [{"role": "user", "content": prompt}],
-            "auth_context": auth_context,
-        })
+        result = await self._graph.ainvoke(
+            {"messages": [{"role": "user", "content": prompt}]},
+            config=with_auth(auth_context),  # auth is execution context, not graph state
+        )
         return JobRun(
             id=str(uuid.uuid4()),
             trigger_id=job_spec.trigger_id,

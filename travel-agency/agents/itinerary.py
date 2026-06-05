@@ -73,7 +73,7 @@ class ItineraryAgent(OrchidAgent):
         return "destinations"
 
     async def run(self, state: OrchidAgentState) -> OrchidAgentState:
-        auth: OrchidAuthContext | None = state.get("auth_context")
+        auth: OrchidAuthContext | None = self._current_auth
         if auth is None:
             return {"messages": [AIMessage(content="[Itinerary] Missing auth_context.")]}
 

@@ -27,6 +27,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from orchid_ai.core.run_config import with_auth
+
 logger = logging.getLogger(__name__)
 
 # ═══════════════════════════════════════════════════════════════════
@@ -255,12 +257,11 @@ async def build_expert_fleet(
                 )
             ),
         ],
-        "auth_context": auth,
         "chat_id": "fleet-builder",
     }
 
     logger.info("[FleetBuilder] Invoking ephemeral Orchid to build expert fleet...")
-    result = await graph.ainvoke(state)
+    result = await graph.ainvoke(state, config=with_auth(auth, thread_id="fleet-builder"))
 
     # ── 6. Extract agent configs from the result ─────────────────
     fleet_configs = _extract_configs_from_result(result, model)

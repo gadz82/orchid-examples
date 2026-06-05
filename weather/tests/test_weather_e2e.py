@@ -235,12 +235,19 @@ async def test_outfit_agent_run_no_data(auth_context):
 
     agent = OutfitAdvisorAgent(reader=NullVectorReader())
     state: dict[str, Any] = {
-        "auth_context": auth_context,
         "messages": [],
         "mcp_context": {},
     }
 
-    result = await agent.run(state)
+    # Auth is execution context — bind it on the run-context ContextVar
+    # (the graph node wrapper does this in production).
+    from orchid_ai.core.agent import OrchidAgentRunContext
+
+    token = agent.set_run_context(OrchidAgentRunContext(auth=auth_context))
+    try:
+        result = await agent.run(state)
+    finally:
+        agent.reset_run_context(token)
     messages = result.get("messages", [])
     assert len(messages) > 0
     content = messages[0].content if hasattr(messages[0], "content") else str(messages[0])

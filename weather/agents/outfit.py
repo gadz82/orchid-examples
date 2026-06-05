@@ -80,7 +80,7 @@ class OutfitAdvisorAgent(OrchidAgent):
         return "clothing-guides"
 
     async def run(self, state: OrchidAgentState) -> OrchidAgentState:
-        auth: OrchidAuthContext | None = state.get("auth_context")
+        auth: OrchidAuthContext | None = self._current_auth
         if auth is None:
             return {"messages": [AIMessage(content="[Outfit Advisor] Missing auth_context.")]}
 

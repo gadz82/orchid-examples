@@ -12,6 +12,7 @@ from orchid_ai.agents.mini_agent_decomposer import MiniAgentDecomposition, MiniA
 from orchid_ai.agents.mini_agent_node import mini_agent_node_factory
 from orchid_ai.core.agent import OrchidAgent
 from orchid_ai.core.state import OrchidAuthContext
+from orchid_ai.core.run_config import with_auth
 from orchid_ai.graph.graph import _create_agent_node, _make_fork_router
 from orchid_ai.observability import extract_event
 
@@ -191,11 +192,10 @@ Covered Concepts: Photosynthesis, Cellular Respiration, DNA Replication
         f"Source 3:\n{third_text}"
     )
     initial_state = {
-        "auth_context": auth_context,
         "messages": [HumanMessage(content=query)],
     }
 
-    decomposed_update = await parent_node(initial_state)
+    decomposed_update = await parent_node(initial_state, config=with_auth(auth_context))
     assert agent.run_calls == 0
 
     state = _merge_state(initial_state, decomposed_update)
@@ -206,7 +206,7 @@ Covered Concepts: Photosynthesis, Cellular Respiration, DNA Replication
     mini_node = mini_agent_node_factory(parent_config=quiz_config, chat_model=chat_model, mcp_clients=[])
     mini_messages = []
     for send in sends:
-        mini_update = await mini_node(send.arg)
+        mini_update = await mini_node(send.arg, config=with_auth(auth_context))
         mini_messages.extend(mini_update.get("messages") or [])
         state = _merge_state(state, mini_update)
 
@@ -259,7 +259,6 @@ async def test_single_file_no_fork(education_config, auth_context: OrchidAuthCon
     parent_node = _create_agent_node(agent, agent_config=quiz_config)
 
     state = {
-        "auth_context": auth_context,
         "messages": [
             HumanMessage(
                 content=(
@@ -270,7 +269,7 @@ async def test_single_file_no_fork(education_config, auth_context: OrchidAuthCon
         ],
     }
 
-    result = await parent_node(state)
+    result = await parent_node(state, config=with_auth(auth_context))
 
     assert agent.run_calls == 1
     assert result["messages"][0].content == "[Quiz Generator Agent]\nSingle-source quiz ready."

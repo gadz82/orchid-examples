@@ -128,7 +128,7 @@ class SupportAgent(OrchidAgent):
     # ── Main entry point ─────────────────────────────────────
 
     async def run(self, state: OrchidAgentState) -> OrchidAgentState:
-        auth: OrchidAuthContext | None = state.get("auth_context")
+        auth: OrchidAuthContext | None = self._current_auth
         user_query = self.extract_user_query(state)
 
         # Check for skill instructions from the orchestrator
