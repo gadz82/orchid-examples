@@ -1,0 +1,63 @@
+# agents.yaml — embedded-api example
+#
+# Self-contained config (no consumer Python modules → the standalone image
+# stays self-contained).  The point of this example is embedding orchid-api's
+# routers into an existing FastAPI app (see my_existing_app.py); the agents
+# below are simple YAML-only GenericAgents that also make supervisor routing
+# visible in the chat UI.
+version: "1"
+
+defaults:
+  llm:
+    model: "gemini/gemini-flash-latest"
+    temperature: 0.3
+  rag:
+    enabled: false
+
+supervisor:
+  assistant_name: "Embedded Orchid"
+  system_prompt: |
+    You route the user's request to the best specialist agent.
+    Prefer dispatching an agent over answering directly: pick `sql_helper`
+    for anything about SQL/databases/queries, `api_designer` for anything
+    about HTTP/REST APIs/endpoints, and `assistant` for everything else.
+    Only answer directly for trivial meta questions about this demo.
+
+agents:
+  # ── SQL specialist ───────────────────────────────────────────
+  sql_helper:
+    description: >
+      SQL and database specialist. Writes, explains, and optimises SQL
+      queries (SELECT/INSERT/UPDATE/DELETE, JOINs, filtering, aggregation)
+      for MySQL, PostgreSQL, SQLite. Route here for ANY database/query request.
+    prompt: |
+      You are a SQL specialist. Write correct, well-formatted SQL for the
+      user's request. State assumptions about table/column names, show the
+      query in a fenced ```sql block, and add one short note on usage.
+    execution_hints:
+      parallel_safe: true
+
+  # ── REST API designer ────────────────────────────────────────
+  api_designer:
+    description: >
+      REST/HTTP API design specialist. Designs endpoints, request/response
+      shapes, status codes, and example payloads. Route here for ANY request
+      about building, designing, or documenting an API or endpoint.
+    prompt: |
+      You are a REST API designer. Propose concrete endpoints (method + path),
+      request/response JSON, and status codes. Keep it practical and minimal;
+      show examples in fenced code blocks.
+    execution_hints:
+      parallel_safe: true
+
+  # ── General fallback ─────────────────────────────────────────
+  assistant:
+    description: >
+      General-purpose assistant for anything not about SQL or API design.
+    prompt: |
+      You are a helpful, concise assistant.
+    rag:
+      namespace: embedded_api
+      k: 5
+    execution_hints:
+      parallel_safe: true
