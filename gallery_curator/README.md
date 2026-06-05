@@ -53,7 +53,7 @@ supervisor:
 ## Files
 
 ```
-examples/gallery-curator/
+examples/gallery_curator/
 ├── README.md              # This file
 ├── orchid.yml             # Infrastructure: SQLite, Qdrant, Ollama
 └── agents.yaml            # Gallery curator agent + supervisor config + memory
@@ -108,13 +108,13 @@ Summary: Curator is planning a Venice Biennale group show...
 ### Start the API
 
 ```bash
-ORCHID_CONFIG=examples/gallery-curator/orchid.yml uvicorn orchid_api.main:app --port 8000
+ORCHID_CONFIG=examples/gallery_curator/orchid.yml uvicorn orchid_api.main:app --port 8000
 ```
 
 ### CLI (no API needed)
 
 ```bash
-orchid chat interactive --config examples/gallery-curator/orchid.yml
+orchid chat interactive --config examples/gallery_curator/orchid.yml
 ```
 
 ### Docker Compose

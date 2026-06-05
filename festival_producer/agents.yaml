@@ -4,7 +4,7 @@
 # cross-agent orchestrator skills and rag_augmented conversation memory.
 #
 # Activate:
-#   AGENTS_CONFIG_PATH=examples/festival-producer/agents.yaml
+#   AGENTS_CONFIG_PATH=examples/festival_producer/agents.yaml
 
 version: "1"
 
@@ -53,44 +53,44 @@ supervisor:
 tools:
   # Artist booking tools
   lookup_artist:
-    class: "examples.festival-producer.tools.booking.LookupArtistTool"
+    class: "examples.festival_producer.tools.booking.LookupArtistTool"
     description: "Look up an artist by name: genre, fee, availability, rider requirements"
   list_available_artists:
-    class: "examples.festival-producer.tools.booking.ListAvailableArtistsTool"
+    class: "examples.festival_producer.tools.booking.ListAvailableArtistsTool"
     description: "List artists available for a given quarter, optionally filtered by max fee"
   get_rider_details:
-    class: "examples.festival-producer.tools.booking.GetRiderDetailsTool"
+    class: "examples.festival_producer.tools.booking.GetRiderDetailsTool"
     description: "Get technical rider: stage preference, power requirements, backstage needs"
   compare_artists:
-    class: "examples.festival-producer.tools.booking.CompareArtistsTool"
+    class: "examples.festival_producer.tools.booking.CompareArtistsTool"
     description: "Compare two artists side-by-side: fee, draw, genre"
 
   # Logistics tools
   check_venue_availability:
-    class: "examples.festival-producer.tools.logistics.CheckVenueAvailabilityTool"
+    class: "examples.festival_producer.tools.logistics.CheckVenueAvailabilityTool"
     description: "Check venue availability: capacity, open slots, power grid specs"
   get_schedule_overview:
-    class: "examples.festival-producer.tools.logistics.GetScheduleOverviewTool"
+    class: "examples.festival_producer.tools.logistics.GetScheduleOverviewTool"
     description: "Get full schedule overview: confirmed bookings and open slots across all stages"
   estimate_power_budget:
-    class: "examples.festival-producer.tools.logistics.EstimatePowerBudgetTool"
+    class: "examples.festival_producer.tools.logistics.EstimatePowerBudgetTool"
     description: "Estimate power budget for a stage based on confirmed artists"
   get_crew_requirements:
-    class: "examples.festival-producer.tools.logistics.GetCrewRequirementsTool"
+    class: "examples.festival_producer.tools.logistics.GetCrewRequirementsTool"
     description: "Estimate crew needs: sound engineers, lighting techs, security, medical"
 
   # Marketing tools
   analyze_demographics:
-    class: "examples.festival-producer.tools.marketing.AnalyzeDemographicsTool"
+    class: "examples.festival_producer.tools.marketing.AnalyzeDemographicsTool"
     description: "Analyze target demographics for a music genre"
   get_pricing_strategy:
-    class: "examples.festival-producer.tools.marketing.GetPricingStrategyTool"
+    class: "examples.festival_producer.tools.marketing.GetPricingStrategyTool"
     description: "Get pricing strategy: early bird, general, late, VIP tiers with revenue projections"
   recommend_channels:
-    class: "examples.festival-producer.tools.marketing.RecommendChannelsTool"
+    class: "examples.festival_producer.tools.marketing.RecommendChannelsTool"
     description: "Recommend marketing channels based on lineup genres and budget"
   project_attendance:
-    class: "examples.festival-producer.tools.marketing.ProjectAttendanceTool"
+    class: "examples.festival_producer.tools.marketing.ProjectAttendanceTool"
     description: "Project attendance based on lineup size and average artist draw"
 
 # ── Orchestrator-level skills (cross-agent) ───────────────────

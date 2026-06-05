@@ -4,7 +4,7 @@
 #   running_summary + structured_output + rag_augmented + middle truncation
 #
 # Activate:
-#   AGENTS_CONFIG_PATH=examples/gallery-curator/agents.yaml
+#   AGENTS_CONFIG_PATH=examples/gallery_curator/agents.yaml
 
 version: "1"
 

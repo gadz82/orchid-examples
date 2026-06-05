@@ -13,7 +13,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir --prefix=/install \
-    "orchid-api>=1.8.2" \
+    "orchid-api>=1.8.4" \
     -r requirements.txt
 
 # ── Stage 2: runtime ──────────────────────────────────────────

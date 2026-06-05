@@ -1,7 +1,6 @@
 # orchid.yml — embedded-api example
 #
-# Reuses the restaurant agents config.  Point this file at any
-# agents.yaml you want the embedded orchid runtime to load.
+# Self-contained: loads this example's own agents.yaml.
 #
 # Usage::
 #
@@ -9,7 +8,7 @@
 #       uvicorn examples.embedded-api.my_existing_app:app --port 8000
 
 agents:
-  config_path: examples/restaurant/config/agents.yaml
+  config_path: examples/embedded-api/agents.yaml
 
 llm:
   model: gemini/gemini-flash-latest

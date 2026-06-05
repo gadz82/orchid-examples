@@ -5,11 +5,11 @@
 # structured JSON entity extraction and SQLite persistence.
 #
 # Usage:
-#   ORCHID_CONFIG=examples/festival-producer/orchid.yml uvicorn orchid_api.main:app
-#   orchid chat interactive --config examples/festival-producer/orchid.yml
+#   ORCHID_CONFIG=examples/festival_producer/orchid.yml uvicorn orchid_api.main:app
+#   orchid chat interactive --config examples/festival_producer/orchid.yml
 
 agents:
-  config_path: examples/festival-producer/agents.yaml
+  config_path: examples/festival_producer/agents.yaml
 
 llm:
   model: ollama/llama3.2

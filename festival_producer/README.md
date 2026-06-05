@@ -54,9 +54,9 @@ supervisor:
 ## Usage
 
 ```bash
-ORCHID_CONFIG=examples/festival-producer/orchid.yml uvicorn orchid_api.main:app
+ORCHID_CONFIG=examples/festival_producer/orchid.yml uvicorn orchid_api.main:app
 # or via CLI:
-orchid chat interactive --config examples/festival-producer/orchid.yml
+orchid chat interactive --config examples/festival_producer/orchid.yml
 ```
 
 ## Example Conversations
@@ -87,6 +87,6 @@ User: Give me a full production review for the current lineup.
 
 ## Related
 
-- [Gallery Curator](/examples/gallery-curator) — Single-agent summarization demo
+- [Gallery Curator](/examples/gallery_curator) — Single-agent summarization demo
 - [Chat Summarization concept](/concepts/chat-summarization)
 - [Supervisor concept](/concepts/supervisor)

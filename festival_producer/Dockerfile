@@ -1,8 +1,8 @@
-# Dockerfile — Gallery Curator example
+# Dockerfile — Festival Producer example
 #
-# Gallery art curation demo with Qdrant RAG.
-# Build context: examples/gallery-curator/
-#   docker build -t orchid-gallery-curator .
+# Multi-agent demo: festival booking, logistics, and marketing with Qdrant RAG.
+# Build context: examples/festival_producer/
+#   docker build -t orchid-festival_producer .
 #
 # Used by docker-compose.yml in this directory.
 
@@ -23,8 +23,8 @@ WORKDIR /app
 
 COPY --from=builder /install /usr/local
 
-# Copy the example package into /app/examples/gallery-curator/
-COPY . examples/gallery-curator
+# Copy the example package into /app/examples/festival_producer/
+COPY . examples/festival_producer
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1

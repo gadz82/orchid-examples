@@ -1,21 +1,21 @@
 # orchid.yml — Gallery Curator demo configuration
 #
-# Self-contained demo: gallery-curator agent with full conversation
+# Self-contained demo: gallery_curator agent with full conversation
 # summarization pipeline (running_summary + structured output + RAG memory).
 # SQLite persistence stores summaries across sessions.
 #
 # Usage:
-#   ORCHID_CONFIG=examples/gallery-curator/orchid.yml uvicorn orchid_api.main:app
+#   ORCHID_CONFIG=examples/gallery_curator/orchid.yml uvicorn orchid_api.main:app
 #
 # Or via the CLI (no API needed):
-#   orchid chat interactive --config examples/gallery-curator/orchid.yml
+#   orchid chat interactive --config examples/gallery_curator/orchid.yml
 #
 # Or via docker-compose:
 #   docker compose -f docker-compose.demo.yml up --build
 
 # ── Agents ────────────────────────────────────────────────────
 agents:
-  config_path: examples/gallery-curator/agents.yaml
+  config_path: examples/gallery_curator/agents.yaml
 
 # ── LLM ───────────────────────────────────────────────────────
 llm:

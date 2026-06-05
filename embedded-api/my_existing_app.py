@@ -35,7 +35,7 @@ from pydantic import BaseModel
 
 # ── Orchid embedding: lifecycle + routers ──────────────────────
 from orchid_api import setup_orchid, teardown_orchid
-from orchid_api.routers import chats, legacy, messages, resume, sharing, streaming
+from orchid_api.routers import chats, messages, resume, sharing, streaming
 
 logger = logging.getLogger(__name__)
 
@@ -128,5 +128,4 @@ app.include_router(messages.router, prefix=ORCHID_PREFIX)
 app.include_router(streaming.router, prefix=ORCHID_PREFIX)
 app.include_router(resume.router, prefix=ORCHID_PREFIX)
 app.include_router(sharing.router, prefix=ORCHID_PREFIX)
-app.include_router(legacy.router, prefix=ORCHID_PREFIX)
 # Skipping mcp_auth.router here — enable it if your setup has OAuth-gated MCP servers.
