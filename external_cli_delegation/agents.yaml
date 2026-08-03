@@ -1,0 +1,49 @@
+# agents.yaml — External CLI delegation example
+#
+# Demonstrates the ``external_agents:`` configuration block.  The orchestrator
+# agent can delegate sub-tasks to a local CLI process.  The stand-in command
+# is ``python -c "print(...)"`` — swap in a real AI CLI (e.g. ``claude``,
+# ``codex``) for actual use.
+#
+# Usage:
+#   orchid config validate examples/external_cli_delegation/agents.yaml
+#   orchid external-agents list examples/external_cli_delegation/agents.yaml
+
+version: "1"
+
+defaults:
+  llm:
+    model: "gemini/gemini-flash-latest"
+    temperature: 0.2
+  rag:
+    enabled: false
+
+external_agents:
+  ask_assistant:
+    command: ["python", "-c"]
+    args: ["claude -p"]
+    timeout: 120
+    description: "Delegate a sub-task to an external AI-assistant CLI."
+    requires_approval: true
+
+agents:
+  orchestrator:
+    description: >
+      Lead agent that coordinates work and can delegate coding or
+      research tasks to an external AI-assistant CLI whesn needed.
+
+    prompt: |
+      You are an orchestrator agent.  You have access to an external
+      AI-assistant CLI tool called ``ask_assistant``.  Use it to
+      delegate sub-tasks that benefit from a separate AI's perspective.
+
+      When the user asks a question, first consider whether the
+      external assistant would add value.  If so, delegate a
+      concise, self-contained prompt to it via the ``ask_assistant``
+      tool, then synthesise the result for the user.
+
+      Be clear about what you delegated and what the external assistant
+      returned.
+
+    tools:
+      - ask_assistant

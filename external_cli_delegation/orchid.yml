@@ -1,0 +1,29 @@
+# orchid.yml — External CLI delegation example
+#
+# Minimal setup: one orchestrator agent + one external-agent CLI tool.
+# Uses SQLite storage (zero infrastructure).  No MCP servers, no Postgres, no
+# external API keys beyond the LLM provider.
+#
+# Usage:
+#   ORCHID_CONFIG=examples/external_cli_delegation/orchid.yml \
+#     orchid chat send "Test the external tool" --config examples/external_cli_delegation/orchid.yml
+#
+# When running inside Docker, ``host.docker.internal`` reaches
+# the host's Ollama.  For local CLI usage remove or override
+# ``ollama_api_base``.
+
+agents:
+  config_path: examples/external_cli_delegation/agents.yaml
+
+llm:
+  model: gemini/gemini-flash-latest
+  gemini_api_key: ${GEMINI_API_KEY}
+
+auth:
+  dev_bypass: true
+
+rag:
+  vector_backend: chroma
+
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage

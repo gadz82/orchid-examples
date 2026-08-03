@@ -1,0 +1,2 @@
+# Pin the framework.
+orchid-ai[documents,events]>=1.8.4
