@@ -1,0 +1,4 @@
+orchid-ai[documents,events]>=1.8.4
+orchid-storage-postgres>=0.1.0
+orchid-rag-qdrant>=0.1.0
+orchid-rag-neo4j>=0.1.0

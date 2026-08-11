@@ -1,0 +1,18 @@
+# golden.yaml — Human-validated Q&A pairs for retrieval evaluation.
+#
+# Each entry:
+#   id:              unique slug (kebab-case)
+#   question:        the user question
+#   expected_answer: the accepted answer (used for LLM-judged faithfulness)
+#   agent:           which agent should be routed
+#   namespace:       expected RAG namespace for retrieved chunks
+#   tags:            optional classification tags
+#   status:          draft | approved | deprecated
+#   code_verified:   confirmed | partial-doc-corrected | refuted-doc-corrected | unverified
+#   code_refs:       list of repo/path references checked during code validation
+#
+# Phase 3 delivers golden.draft.yaml; only Francesco can move pairs to
+# golden.yaml (status: approved).  Do NOT tune retrieval parameters
+# until the approved set lands.
+
+entries: []

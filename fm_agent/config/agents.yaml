@@ -1,0 +1,923 @@
+version: '1'
+defaults:
+  llm:
+    model: gemini/gemini-flash-latest
+    temperature: 0.2
+  rag:
+    enabled: true
+    k: 5
+supervisor:
+  assistant_name: FM
+  history_summary_enabled: true
+  history_summary_model: gemini/gemini-2.5-flash-lite
+  history_summary_recent_turns: 10
+  skip_synthesis_when_single_agent: true
+  memory:
+    strategy: rag_augmented
+    structured_output: true
+    persist_summary: true
+    rag_namespace: __memory__
+    rag_k: 5
+    store_turns: true
+    truncation_strategy: middle
+    truncation_max_chars: 1200
+guardrails:
+  input:
+  - type: prompt_injection
+    fail_action: block
+  - type: max_length
+    fail_action: block
+    config:
+      max_characters: 8000
+  output:
+  - type: pii_detection
+    fail_action: redact
+    config:
+      entities:
+      - email
+      - phone
+      - credit_card
+  - type: secret_detection
+    fail_action: redact
+_shared_persona: &shared_persona 'You are a pragmatic staff software engineer.
+
+  Answer based on the knowledge available in your RAG index —
+
+  not general internet or LLM training data.
+
+  If you do not find an answer in your knowledge, say
+
+  "not in my knowledge" instead of guessing.
+
+
+  Always cite your sources as repo/path from the chunk metadata.
+
+  Prefer information tagged authority=code over authority=doc.
+
+  If the two conflict, mention the drift.
+
+  '
+_mcp_gitlab_ro:
+- name: gitlab
+  type: remote
+  url: https://gitlab.com/api/v4/mcp
+  auth:
+    mode: passthrough
+  tools:
+  - name: get_file
+    inject_to_rag: true
+  - name: search_code
+    inject_to_rag: true
+  - name: list_repository_tree
+    inject_to_rag: false
+agents:
+  notification-expert:
+    description: 'Covers notification-be, notification-paas-be (PHP client), and paas-notification-meta.  Knows the notification
+      delivery pipeline, API endpoints, message taxonomy, and the meta-json notification type hierarchy.  Use for questions
+      about how notifications are triggered, queued, templated, and sent.
+
+      '
+    prompt: *shared_persona
+    rag:
+      namespace: svc-notification
+      retrieval:
+        strategy: hybrid
+        hybrid:
+          fusion: rrf
+        query_transformers:
+        - reformulate
+        exclude_dynamic: true
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - notification
+          - notify
+          - inbox
+          - template
+          - shortcode
+          - meta
+          - taxonomy
+          - notif
+    execution_hints:
+      parallel_safe: true
+    mcp_servers: &id001
+    - name: gitlab
+      type: remote
+      url: https://gitlab.com/api/v4/mcp
+      auth:
+        mode: passthrough
+      tools:
+      - name: get_file
+        inject_to_rag: true
+      - name: search_code
+        inject_to_rag: true
+      - name: list_repository_tree
+        inject_to_rag: false
+  mailer-expert:
+    description: 'Covers mailer-service-be.  Knows SMTP delivery, custom retry logic, email rendering pipelines, and mailer
+      configuration. Use for questions about email delivery, retry strategies, and mailer integration.
+
+      '
+    prompt: *shared_persona
+    rag:
+      namespace: svc-mailer
+      retrieval:
+        strategy: hybrid
+        hybrid:
+          fusion: rrf
+        query_transformers:
+        - reformulate
+        exclude_dynamic: true
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - mailer
+          - email
+          - smtp
+          - retry
+          - render
+          - template
+          - send
+    execution_hints:
+      parallel_safe: true
+    mcp_servers: *id001
+  push-expert:
+    description: 'Covers push-notification-service-be.  Knows push notification delivery (APNs, FCM), device token management,
+      and push payload structure.  Use for questions about mobile push delivery and device registration.
+
+      '
+    prompt: *shared_persona
+    rag:
+      namespace: svc-push
+      retrieval:
+        strategy: hybrid
+        hybrid:
+          fusion: rrf
+        query_transformers:
+        - reformulate
+        exclude_dynamic: true
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - push
+          - apns
+          - fcm
+          - device
+          - token
+          - mobile
+          - notification
+    execution_hints:
+      parallel_safe: true
+    mcp_servers: *id001
+  eventbus-expert:
+    description: 'Covers serverless-event-bus and sync-bus-be.  Knows the event bus architecture, queue wiring (SQS/SNS),
+      serverless function configurations, and the sync-bus data model.  Use for questions about event routing, bus topology,
+      function triggers and sync-bus design.
+
+      '
+    prompt: *shared_persona
+    rag:
+      namespace: svc-eventbus
+      retrieval:
+        strategy: hybrid
+        hybrid:
+          fusion: rrf
+        query_transformers:
+        - reformulate
+        exclude_dynamic: true
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - event
+          - bus
+          - sync-bus
+          - sqs
+          - sns
+          - lambda
+          - serverless
+          - trigger
+          - queue
+          - topic
+    execution_hints:
+      parallel_safe: true
+    mcp_servers: *id001
+  domains-expert:
+    description: 'Covers the domains repository: Extended Enterprise, domain management, email domains, custom domains, DNS
+      configuration, SSL certificate provisioning.  Also carries coding standards from .cursor/skills and .ai/skills (the
+      eng-standards namespace). Use for questions about domain configuration, multi-tenancy setup, and coding conventions
+      defined in domains'' skill files.
+
+      '
+    prompt: *shared_persona
+    rag:
+      namespace: svc-domains
+      retrieval:
+        strategy: hybrid
+        hybrid:
+          fusion: rrf
+        query_transformers:
+        - reformulate
+        exclude_dynamic: true
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - domain
+          - dns
+          - ssl
+          - certificate
+          - extended
+          - enterprise
+          - custom
+          - tenant
+          - multi-tenant
+    execution_hints:
+      parallel_safe: true
+    mcp_servers: *id001
+  devops-expert:
+    description: 'Covers cdk-base-stack-devops, ci-paas-gitflow-devops, and ci-templates-devops (README deduplicated with
+      ci-paas-gitflow). Knows CDK stack constructs, SSM parameter publications, CI/CD pipeline design, gitflow conventions,
+      and deployment topologies. Use for questions about infrastructure, pipeline configuration, deployment automation, and
+      SSM parameter management.
+
+      '
+    prompt: *shared_persona
+    rag:
+      namespace: svc-devops
+      retrieval:
+        strategy: hybrid
+        hybrid:
+          fusion: rrf
+        query_transformers:
+        - reformulate
+        exclude_dynamic: true
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - cdk
+          - stack
+          - ssm
+          - parameter
+          - pipeline
+          - ci
+          - cd
+          - deploy
+          - infrastructure
+          - gitflow
+          - cloudformation
+    execution_hints:
+      parallel_safe: true
+    mcp_servers: *id001
+  messenger-expert:
+    description: 'Covers hydra apps/messenger and relevant shared/ modules (apps/notifications and apps/learn excluded).  Knows
+      the Hydra messenger application: chat architecture, message routing, presence system, and the shared library contracts.  Use
+      for questions about the messenger feature, its data model, and integration with the shared Hydra layer.
+
+      '
+    prompt: *shared_persona
+    rag:
+      namespace: svc-messenger
+      retrieval:
+        strategy: hybrid
+        hybrid:
+          fusion: rrf
+        query_transformers:
+        - reformulate
+        exclude_dynamic: true
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - messenger
+          - chat
+          - message
+          - hydra
+          - presence
+          - shared
+          - conversation
+    execution_hints:
+      parallel_safe: true
+    mcp_servers: *id001
+  standards-coach:
+    description: 'Answers "how we code" questions: Doctrine patterns, TypeScript conventions, migration rules, CI usage, testing
+      standards. Indexed from domains/.cursor/skills, hydra .ai/skills + AGENTS.md/CLAUDE.md hierarchy, notification-be .agents/,
+      and CI usage docs.  Use for coding conventions, best-practice questions, and engineering standards.
+
+      '
+    prompt: *shared_persona
+    rag:
+      namespace: eng-standards
+      retrieval:
+        strategy: multi_query
+        query_transformers:
+        - multi_query
+        exclude_dynamic: true
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - doctrine
+          - pattern
+          - convention
+          - standard
+          - migration
+          - testing
+          - lint
+          - ci
+          - typescript
+          - php
+          - code
+    execution_hints:
+      parallel_safe: true
+    mcp_servers: *id001
+  cartographer:
+    description: 'Explains service connections, dependencies, event flows, and deployment topologies across the notification
+      platform.  Backed by graph_rag over Neo4j + platform-graph vector cards.  Use for dependency/impact questions: "who
+      consumes this queue?", "what is the blast radius if X is down?", "which services read this SSM parameter?".  Always
+      cite graph edges and entity names in answers.
+
+      '
+    prompt: "You are a platform cartographer — an expert on the notification\nplatform's service dependency graph.\n\nYour\
+      \ knowledge comes from a Neo4j graph database that models services,\nqueues, SNS topics, Lambda functions, SSM parameters,\
+      \ endpoints,\nnotification products/groups/types, and their relationships (CONSUMES,\nPUBLISHES, READS_PARAM, DEPENDS_ON,\
+      \ DEPLOYED_BY, HAS_GROUP, HAS_TYPE,\nREGISTERED_WITH).\n\nFor every answer:\n- Cite the exact entity names and relationship\
+      \ labels from the graph.\n- Use \"not in my knowledge\" if the graph does not have an answer.\n- For blast-radius questions,\
+      \ walk the graph and list every affected\n  downstream service with its dependency path.\n"
+    rag:
+      namespace: platform-graph
+      retrieval:
+        strategy: graph_rag
+        graph:
+          max_hops: 2
+          fuse_with_vectors: true
+        exclude_dynamic: true
+    mini_agent:
+      enabled: true
+      max_count: 3
+      tool_allowlist_mode: strict
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - graph
+          - dependency
+          - connect
+          - blast
+          - radius
+          - topology
+          - queue
+          - topic
+          - ssm
+          - parameter
+          - lambda
+          - consumer
+          - publisher
+          - edge
+          - flow
+          - architecture
+          - deploy
+    execution_hints:
+      parallel_safe: true
+  sre-investigator:
+    description: 'Incident investigation: log correlation, error triage, and debugging.  Queries Datadog for live logs and
+      metrics, reads Confluence runbooks and GitLab source code, and maps blast radius via cartographer.  Backed by recency_hybrid
+      RAG over runbooks.  Use for incidents, error investigation, log queries, and production troubleshooting.
+
+      '
+    prompt: "You are an SRE investigator tasked with debugging production\nincidents on the notification platform.\n\nFor\
+      \ every investigation:\n- Query Datadog for recent logs and error rates first.\n- Cross-reference findings with runbooks\
+      \ in your RAG knowledge.\n- If the incident involves a specific service, route a code\n  question to the relevant service\
+      \ expert.\n- Map the blast radius: which other services depend on the\n  affected component?\n- Cite log timestamps,\
+      \ error codes, and graph edges.\n\nWhen Datadog or another tool is unavailable, say so and fall back\nto RAG knowledge.\
+      \  Do not guess.\n"
+    rag:
+      namespace: runbooks
+      retrieval:
+        strategy: recency_hybrid
+        metadata_filters:
+          deprecated:
+            not: true
+      k: 8
+    mcp_servers:
+    - name: datadog
+      type: remote
+      url: https://api.datadoghq.com/api/v2/mcp
+      auth:
+        mode: passthrough
+      tools:
+      - name: query_logs
+        inject_to_rag: true
+      - name: query_metrics
+        inject_to_rag: true
+      - name: get_logs
+        inject_to_rag: true
+      - name: get_metrics
+        inject_to_rag: true
+    - &id002
+      name: atlassian-rovo
+      type: remote
+      url: https://mcp.atlassian.com/v1/mcp
+      auth:
+        mode: oauth
+      tools:
+      - name: atlassianUserInfo
+        inject_to_rag: false
+      - name: getAccessibleAtlassianResources
+        inject_to_rag: false
+      - name: getConfluenceSpaces
+        inject_to_rag: false
+      - name: getPagesInConfluenceSpace
+        inject_to_rag: true
+      - name: getConfluencePage
+        inject_to_rag: true
+      - name: getConfluencePageAncestors
+        inject_to_rag: false
+      - name: getConfluencePageFooterComments
+        inject_to_rag: false
+      - name: getConfluencePageInlineComments
+        inject_to_rag: false
+      - name: searchConfluenceUsingCql
+        inject_to_rag: true
+      - name: getJiraIssue
+        inject_to_rag: true
+      - name: searchJiraIssuesUsingJql
+        inject_to_rag: true
+      - name: getVisibleJiraProjects
+        inject_to_rag: false
+      - name: getJiraProjectIssueTypesMetadata
+        inject_to_rag: false
+      - name: getTransitionsForJiraIssue
+        inject_to_rag: false
+      - name: lookupJiraAccountId
+        inject_to_rag: false
+    - &id003
+      name: gitlab
+      type: remote
+      url: https://gitlab.com/api/v4/mcp
+      auth:
+        mode: passthrough
+      tools:
+      - name: '*'
+    - &id004
+      name: slack
+      type: remote
+      url: https://slack.com/api/v2/mcp
+      auth:
+        mode: passthrough
+      tools:
+      - name: chat_postMessage
+        inject_to_rag: false
+      - name: chat_postEphemeral
+        inject_to_rag: false
+    mini_agent:
+      enabled: true
+      max_count: 4
+      tool_allowlist_mode: strict
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - incident
+          - error
+          - log
+          - trace
+          - debug
+          - triage
+          - outage
+          - downtime
+          - monitor
+          - alert
+          - anomaly
+          - runbook
+          - postmortem
+          - datadog
+    execution_hints:
+      parallel_safe: true
+  delivery-analyst:
+    description: 'Ticket and MR context: fetches Jira issues, GitLab merge requests, and Confluence pages live via MCP.  Adds
+      institutional memory from closed-ticket summaries in the tickets RAG namespace. Use for questions about specific tickets,
+      MRs, or release notes. Also powers MR review and release-impact workflows.
+
+      '
+    prompt: "You are a delivery analyst — you pull live ticket and merge-request\ncontext from Jira, GitLab, and Confluence.\n\
+      \nFor every answer:\n- Fetch the Jira issue or MR live — do not guess.\n- Cite issue keys (PROJ-1234), MR links, and\
+      \ Confluence page URLs.\n- For closed tickets, supplement with the tickets RAG namespace for\n  institutional memory\
+      \ (\"have we seen this before?\").\n- Cross-reference with the standards-coach for review context when\n  the question\
+      \ involves code review.\n\nWhen a Jira or GitLab tool returns an error, say so explicitly —\ndo not fabricate issue\
+      \ details.\n"
+    rag:
+      namespace: tickets
+      k: 5
+      retrieval:
+        strategy: multi_query
+        query_transformers:
+        - multi_query
+    mcp_servers:
+    - *id002
+    - *id003
+    - *id004
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - ticket
+          - jira
+          - mr
+          - merge
+          - request
+          - review
+          - release
+          - deploy
+          - confluence
+          - page
+          - issue
+          - project
+    execution_hints:
+      parallel_safe: true
+skills:
+  end-to-end-delivery:
+    description: 'Trace an email notification from LMS event to inbox: the notification engine receives the event, the event
+      bus routes it, and the mailer delivers it.  Chains notification-expert → eventbus-expert → mailer-expert.
+  
+      '
+    steps:
+    - agent: notification-expert
+      instruction: 'Explain how the notification engine processes an incoming event: event types, queue routing, and how the
+        message is prepared for delivery (templates, shortcodes, taxonomy).
+  
+        '
+    - agent: eventbus-expert
+      instruction: 'Given the event from the notification engine, describe how the event bus routes it — which queues/topics,
+        which serverless functions are triggered, and how the message flows to the mailer.
+  
+        '
+    - agent: mailer-expert
+      instruction: 'Given the event routed by the bus, describe how the mailer service picks it up, renders the email template,
+        applies SMTP retry logic, and delivers the message to the inbox.
+  
+        '
+  onboarding-tour:
+    description: 'New-joiner walkthrough: cartographer maps the platform architecture, then each service expert explains their
+      bounded context.  Chains cartographer → notification-expert → eventbus-expert → mailer-expert → push-expert → domains-expert
+      → devops-expert.
+  
+      '
+    steps:
+    - agent: cartographer
+      instruction: 'Map the notification platform architecture: list all services, queues, topics, SSM parameters, and their
+        relationships.  Explain how events flow from the LMS to an inbox.
+  
+        '
+    - agent: notification-expert
+      instruction: 'Explain the notification delivery pipeline in detail: how events are received, how messages are templated
+        with shortcodes, and how the meta taxonomy classifies notification types.
+  
+        '
+    - agent: eventbus-expert
+      instruction: 'Describe the event bus topology: which queues and topics carry notification events, which serverless functions
+        are triggered, and how the sync-bus layer operates.
+  
+        '
+    - agent: mailer-expert
+      instruction: 'Explain how the mailer service renders and delivers emails: SMTP configuration, retry logic, and integration
+        with the notification pipeline.
+  
+        '
+    - agent: push-expert
+      instruction: 'Describe push notification delivery: APNs and FCM setup, device token management, and how push payloads
+        flow from the notification engine.
+  
+        '
+    - agent: domains-expert
+      instruction: 'Explain the domains repository: Extended Enterprise architecture, domain management flows, SSL certificate
+        provisioning, and multi-tenant routing.
+  
+        '
+    - agent: devops-expert
+      instruction: 'Describe the deployment infrastructure: CDK stack constructs, SSM parameter publications, CI/CD pipeline
+        design, and the gitflow branching model.
+  
+        '
+  incident-triage:
+    description: 'Incident response workflow: sre-investigator queries Datadog logs and Confluence runbooks, routes to the
+      relevant service expert for code context, then cartographer maps the blast radius.
+  
+      '
+    steps:
+    - agent: sre-investigator
+      instruction: 'Query Datadog for recent error logs, check Confluence runbooks for known postmortems matching the error
+        signatures, and identify which services are involved.
+  
+        '
+    - agent: notification-expert
+      instruction: 'If the incident involves notification delivery, check the notification-be pipeline: event ingestion, template
+        rendering, and queue status.
+  
+        '
+    - agent: cartographer
+      instruction: 'Map the blast radius: which downstream services depend on the affected components?  List every consumer,
+        every queue, and every SSM parameter in the dependency chain.
+  
+        '
+  mr-review-context:
+    description: 'Merge request review with full context: delivery-analyst fetches MR diff and Jira ticket details, standards-coach
+      reviews against coding conventions, and the relevant service expert provides domain-specific feedback.
+  
+      '
+    steps:
+    - agent: delivery-analyst
+      instruction: 'Fetch the merge request details and linked Jira ticket.  Pull the MR description, diff summary, ticket
+        requirements, and any linked Confluence design docs.
+  
+        '
+    - agent: standards-coach
+      instruction: 'Review the MR changes against Docebo coding standards: Doctrine patterns, TypeScript conventions, migration
+        rules, and CI requirements.  Flag any violations.
+  
+        '
+    - agent: notification-expert
+      instruction: 'Provide domain-specific review feedback: does the change align with the notification platform architecture?  Are
+        there edge cases in the delivery pipeline that this MR should handle?
+  
+        '
+  release-impact:
+    description: 'Assess the impact of a release: delivery-analyst retrieves deploy notes and changed services, cartographer
+      maps affected components and their dependencies.
+  
+      '
+    steps:
+    - agent: delivery-analyst
+      instruction: 'Retrieve the release notes, list changed services, and find related Jira tickets merged since the last
+        release.
+  
+        '
+    - agent: cartographer
+      instruction: 'Given the list of changed services, map the full dependency graph: which queues, SSM parameters, and downstream
+        services are affected?  What is the blast radius of each change?
+  
+        '
+events:
+  enabled: true
+  store:
+    class: orchid_storage_postgres.event_storage.PostgresEventStorage
+    extra_args:
+      dsn: postgresql://orchid:${POSTGRES_PASSWORD:-orchid}@postgres:5432/orchid
+  queue:
+    class: orchid_storage_postgres.event_queue.PostgresSignalQueue
+    notify_enabled: true
+    poll_interval_ms: 200
+    lease_seconds: 30
+    max_attempts: 5
+  scheduler:
+    class: orchid_ai.events.schedulers.apscheduler.APSchedulerBackend
+  producers:
+  - class: orchid_ai.events.producers.scheduler.SchedulerProducer
+  - class: orchid_ai.events.producers.internal.InternalEmissionProducer
+  processors:
+  - class: orchid_ai.events.processors.asyncio_pool.AsyncioWorkerPoolProcessor
+    concurrency: 4
+    poll_interval_ms: 200
+    lease_seconds: 30
+    max_attempts: 5
+  ingestion:
+    sources:
+    - id: datadog-webhook
+      validator:
+        class: orchid_ai.events.auth.HMACValidator
+        secret_ref: env:DD_WEBHOOK_SECRET
+      allowed_types:
+      - datadog.monitor.triggered
+    - id: gitlab-webhook
+      validator:
+        class: orchid_ai.events.auth.HMACValidator
+        secret_ref: env:GITLAB_WEBHOOK_SECRET
+      allowed_types:
+      - gitlab.push
+      - gitlab.merge_request.merged
+  schedules:
+  - id: morning-digest-cron
+    cron: 0 7 * * 1-5
+    trigger_id: morning-digest
+    identity:
+      mode: service_account
+      name: digest-bot
+    enabled: true
+  - id: weekly-ticket-cron
+    cron: 0 2 * * 0
+    trigger_id: weekly-ticket-harvest
+    identity:
+      mode: service_account
+      name: harvest-bot
+    enabled: true
+  - id: log-anomaly-cron
+    cron: 0 4 * * *
+    trigger_id: log-anomaly-digest
+    identity:
+      mode: service_account
+      name: sre-bot
+    enabled: true
+  - id: confluence-sync-cron
+    cron: 0 3 * * 0
+    trigger_id: confluence-sync
+    identity:
+      mode: service_account
+      name: sync-bot
+    enabled: true
+  - id: help-center-sync-cron
+    cron: 0 3 * * 0
+    trigger_id: help-center-sync
+    identity:
+      mode: service_account
+      name: sync-bot
+    enabled: true
+  triggers:
+  - id: morning-digest
+    'on':
+      signal: cron
+      cron: 0 7 * * 1-5
+    emits:
+      agent: standards-coach
+      prompt_template: Produce a digest of new merge requests, failed pipelines, and high-priority tickets across the notification
+        platform repos from the last 24 hours. Format as Markdown.
+      identity:
+        mode: service_account
+        name: digest-bot
+      visibility: tenant
+    retry:
+      max: 2
+      backoff: exponential
+    parallelism: unbounded
+  - id: datadog-alert-triage
+    'on':
+      signal: datadog.monitor.triggered
+    emits:
+      agent: sre-investigator
+      prompt_template: 'A Datadog monitor fired. Run the incident-triage skill. Monitor: {{payload.monitor_name}}. Alert message:
+        {{payload.alert_message}}.'
+      identity:
+        mode: service_account
+        name: sre-bot
+      visibility: tenant
+    retry:
+      max: 3
+      backoff: exponential
+      jitter: true
+    parallelism: per_tenant
+  - id: weekly-ticket-harvest
+    'on':
+      signal: cron
+      cron: 0 2 * * 0
+    emits:
+      agent: delivery-analyst
+      prompt_template: Harvest closed Jira tickets and merged MRs from the last week. Summarise each into a 200-word blurb
+        with project, service, closed_at, and type metadata. Produce a JSON array.
+      identity:
+        mode: service_account
+        name: harvest-bot
+      visibility: tenant
+    retry:
+      max: 2
+      backoff: exponential
+    parallelism: unbounded
+  - id: reindex-on-merge
+    'on':
+      signal: gitlab.push
+    emits:
+      agent: devops-expert
+      prompt_template: A push event occurred on repo {{payload.repo_name}} (branch {{payload.branch}}). Trigger an incremental
+        fm-indexer docs run for that repo.
+      identity:
+        mode: service_account
+        name: reindex-bot
+      visibility: tenant
+    retry:
+      max: 2
+      backoff: linear
+    parallelism: per_tenant
+  - id: log-anomaly-digest
+    'on':
+      signal: cron
+      cron: 0 4 * * *
+    emits:
+      agent: sre-investigator
+      prompt_template: Pull the last 24 hours of Datadog logs per service. Compare error rates and new error signatures against
+        the previous 24-hour window baseline (stored in Postgres). Produce an anomaly digest with deltas.
+      identity:
+        mode: service_account
+        name: sre-bot
+      visibility: tenant
+    retry:
+      max: 2
+      backoff: exponential
+    parallelism: unbounded
+  - id: confluence-sync
+    'on':
+      signal: cron
+      cron: 0 3 * * 0
+    emits:
+      agent: delivery-analyst
+      prompt_template: Walk configured Confluence spaces using the Atlassian read tools. Ingest new or updated pages into
+        the internal-docs and runbooks namespaces. Idempotent on (page_id, version).
+      identity:
+        mode: service_account
+        name: sync-bot
+      visibility: tenant
+    retry:
+      max: 2
+      backoff: exponential
+    parallelism: unbounded
+  - id: help-center-sync
+    'on':
+      signal: cron
+      cron: 0 3 * * 0
+    emits:
+      agent: notification-expert
+      prompt_template: Re-run fm-indexer kb on the whitelisted Help Center sections. Ingest new or updated articles into product-kb.
+        Idempotent on (article_id, updated_at).
+      identity:
+        mode: service_account
+        name: sync-bot
+      visibility: tenant
+    retry:
+      max: 2
+      backoff: exponential
+    parallelism: unbounded
+  - id: capture-retention
+    'on':
+      signal: cron
+      cron: 0 5 * * 0
+    emits:
+      agent: standards-coach
+      prompt_template: Prune chat_agent-scope dynamic captures older than 30 days. Flag L1 items cited in >= 3 answers across
+        distinct chats as promotion candidates. Post the candidate list to Slack for human approval.
+      identity:
+        mode: service_account
+        name: retention-bot
+      visibility: tenant
+    retry:
+      max: 1
+      backoff: fixed
+    parallelism: unbounded
+  - id: doc-drift-check
+    'on':
+      signal: cron
+      cron: 0 6 1 * *
+    emits:
+      agent: standards-coach
+      prompt_template: Re-validate all approved golden pairs' code-checkable claims against current repo state via GitLab
+        MCP. Flag newly drifted documentation or answers to Slack using DOC_DRIFT.md format.
+      identity:
+        mode: service_account
+        name: drift-bot
+      visibility: tenant
+    retry:
+      max: 1
+      backoff: fixed
+    parallelism: unbounded
+mcp_gateway:
+  tools:
+    orchid_ask:
+      title: Ask the FM Staff Engineer
+      description: 'Ask the FM agent fleet any question about the notification platform: service architecture, deployment
+        pipelines, domain configuration, coding standards, incident investigation, or release impact analysis. The fleet includes
+        11 specialist agents backed by RAG over internal documentation, live Jira/Confluence/Datadog access, and a platform
+        dependency graph.'
+    orchid_upload_file:
+      title: Upload a document for analysis
+      description: Upload a log excerpt, stack trace, or document to include in the FM fleet's analysis.
+    orchid_signal_emit:
+      title: Trigger a background workflow
+      description: Emit a Pollen signal to start an event-driven Bloom run (e.g., reindex after merge, ticket harvest).
+    orchid_bloom_status:
+      title: Check background work status
+      description: Check the status of a running Bloom job in the FM fleet (e.g., morning digest, log anomaly analysis).
+    orchid_bloom_list:
+      title: List recent background runs
+      description: Browse recent Bloom runs in the FM fleet with optional status or trigger filters.

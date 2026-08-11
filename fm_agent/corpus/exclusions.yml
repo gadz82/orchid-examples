@@ -1,0 +1,44 @@
+# exclusions.yml — Corpus exclusion rules for the FM Agent indexer
+#
+# Paths and patterns that the batch indexer skips when crawling the configured
+# repos.  Exclusion rules are applied on top of the built-in defaults (see
+# indexer/walker.py DEFAULT_EXCLUDE_GLOBS / DEFAULT_EXCLUDE_DIRS).
+
+exclude_patterns:
+  - .env*
+  - "*.pem"
+  - "*key*"
+  - "**/fixtures/**secrets**"
+  - vendor/**
+  - node_modules/**
+  - dist/**
+  - cdk.out/**
+  - __pycache__/**
+  - .venv/**
+  - .pytest_cache/**
+  - .ruff_cache/**
+  - "**/src/generated/**"
+  - "**/migrations/**"
+  - "*.pdf"
+  - "*.xlsx"
+  - "*.pptx"
+  - "*.png"
+  - "*.jpg"
+  - "*.jpeg"
+  - "*.d.ts"
+  - "*.js"
+
+exclude_paths:
+  - hydra/apps/notifications
+  - hydra/apps/learn
+  # add repo-specific paths if needed
+
+help_center_sections:
+  - id: "36751359086866"
+    name: Notifiche
+    url: https://help.docebo.com/hc/en-us/sections/36751359086866-Notifiche
+  - id: "36751330938386"
+    name: Gestione-dei-domini
+    url: https://help.docebo.com/hc/en-us/sections/36751330938386-Gestione-dei-domini
+
+help_center_base_url: https://help.docebo.com/hc/en-us

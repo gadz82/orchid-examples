@@ -1,0 +1,469 @@
+# FM Agent — Golden eval set, DRAFT for validation (SPEC §9.4)
+# Grounding: outputs/kb/ (8 Help Center articles) + outputs/confluence/ (25 pages).
+# Every pair: status draft → Francesco flips to approved / edits / deletes.
+# Conventions: namespace product-kb unless stated; agent = expected routing target.
+#
+# CODE-AS-SOURCE-OF-TRUTH VALIDATION (2026-08-05): all code-checkable internal-docs
+# claims were verified against the mounted repos (hydra develop, notification-be,
+# paas-notification-meta, mailer-service-be). Where docs and code disagreed, the
+# expected_answer now follows the CODE and flags the doc drift.
+# code_verified values:
+#   confirmed              — doc matched code
+#   partial-doc-corrected  — doc mostly right, answer corrected on specifics
+#   refuted-doc-corrected  — doc claim was wrong, answer rewritten from code
+#   unverified             — grounding repo not mounted (local-environment, FE libs)
+# Pairs without the field: product-kb pairs describe product behavior documented in
+# the public KB — verifiable only against a live platform, not this codebase.
+# Unverified (repo not mounted): cf-001, cf-002, cf-003 (local-environment repo),
+# cf-070 (notifications-admin FE lib), plus cf-043's claim that the dictionary also
+# exists in the Legacy codebase.
+# Full doc-vs-code discrepancy list: see DOC_DRIFT.md (fix Confluence from it).
+
+version: 1
+pairs:
+  # ── Configuring notifications (360020126259) ────────────────────────────
+  - id: kb-001
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "Can I change the event type of a notification after creating it?"
+    expected_answer: "No — the event becomes read-only after creation. Duplicate the notification (Timing, Trigger filters, Recipients, Delivery channels can be copied selectively) and pick a new event."
+    expected_source_paths: [kb/360020126259-configuring-notifications.md]
+  - id: kb-002
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "How many recipient roles can a single notification target?"
+    expected_answer: "One role per notification (Users, Power Users, Managers, Instructors, or Superadmins). The only exception is 'Subscription plan has been purchased', which supports Superadmin plus another role. Power User recipients can only be set by a Superadmin."
+    expected_source_paths: [kb/360020126259-configuring-notifications.md]
+  - id: kb-003
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "What are the mobile push notification length limits?"
+    expected_answer: "Title max 50 characters, message max 150 characters — counted AFTER shortcode expansion. Push is only available for a subset of Course and Learning plan events."
+    expected_source_paths: [kb/360020126259-configuring-notifications.md]
+  - id: kb-004
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "What happens when a customer's custom SMTP server doesn't respond?"
+    expected_answer: "If the custom SMTP doesn't respond within 15 seconds the notification is marked Failed and is NOT retried."
+    expected_source_paths: [kb/360020126259-configuring-notifications.md]
+  - id: kb-005
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "How long are notification delivery logs retained and what export limits apply?"
+    expected_answer: "Logs (Queued/Delivered/Failed) are retained 90 days; the filter range is max 14 days within the past 3 months; CSV export is Superadmin-only. In-platform notifications are retained ~90 days."
+    expected_source_paths: [kb/360020126259-configuring-notifications.md]
+  - id: kb-006
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "What are the Slack delivery channel limits for notifications?"
+    expected_answer: "Max 10 Slack channels per notification, delivery throttled by Slack's 1 message/second API limit, queued messages deleted after 7 days."
+    expected_source_paths: [kb/360020126259-configuring-notifications.md]
+  - id: kb-007
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "Do group and branch trigger filters combine with AND or OR logic?"
+    expected_answer: "OR logic — with one exception: 'User subscribed to a group', where branch filters apply with AND logic against group triggers (changed in the new notification service)."
+    expected_source_paths: [kb/360020126259-configuring-notifications.md, kb/4429113070226-notification-events-and-conditions.md]
+
+  # ── Transition to the new notification service (22875539857938) ─────────
+  - id: kb-010
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "How did shortcode syntax change in the new notification service?"
+    expected_answer: "From [square_brackets] to {{double_curly_braces}}; migration converts them automatically. The [calendar_attachment] shortcode was removed — migration strips it and adds a UI-based calendar attachment, which can truncate the message text (manual review needed)."
+    expected_source_paths: [kb/22875539857938-transition-to-the-new-notification-service.md]
+  - id: kb-011
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "How are out-of-range schedule time frames ported to the new notification service?"
+    expected_answer: "They convert to the next larger unit (73 hours → 4 days; 371 days → 53 weeks → 13 months), time set to 00:00. Frames exceeding 24 months are NOT migrated."
+    expected_source_paths: [kb/22875539857938-transition-to-the-new-notification-service.md]
+  - id: kb-012
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "Why can migrated notifications suddenly fire for ALL courses?"
+    expected_answer: "Migrated notifications targeting deleted/inactive courses become unfiltered (global) in the new service — legacy silently didn't send them. Saved by a Superadmin, they then trigger for all courses/learning plans."
+    expected_source_paths: [kb/22875539857938-transition-to-the-new-notification-service.md]
+  - id: kb-013
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "Why might extended enterprise users receive duplicate notifications after migration, and what's the fix?"
+    expected_answer: "Legacy restricted trigger/recipients to the EE client where the notification was saved; the new service does not. Fix: branch trigger filters, or consolidate into one notification using {{extend_enterprise_logo}} — the new service auto-inserts the correct per-recipient base URL."
+    expected_source_paths: [kb/22875539857938-transition-to-the-new-notification-service.md]
+
+  # ── Notifications legacy (23030854655890) ───────────────────────────────
+  - id: kb-020
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "In legacy notifications, why does 'X days after event' sometimes arrive a day later than expected?"
+    expected_answer: "Legacy advances N 24-hour periods from the event, then sends at the next occurrence of the scheduled hour — which can land a day later. Exception: 'Learner has yet to complete a course' uses human days."
+    expected_source_paths: [kb/23030854655890-legacy-notifications.md]
+  - id: kb-021
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "Why don't ILT session instructors receive 'ILT session starting' notifications?"
+    expected_answer: "Instructors are assigned to sessions, not enrolled — the notification reaches only enrolled users, so instructors must also be enrolled as learners to receive it."
+    expected_source_paths: [kb/23030854655890-legacy-notifications.md]
+  - id: kb-022
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "Which timezones fire legacy scheduled notifications an hour early?"
+    expected_answer: "Timezones offset by 30/45 minutes from UTC (IST, ACST, NPT, NST, …); workaround is scheduling one hour forward. Also, 'hours before event' ignores minutes — a 10:30 session with 1-hour notice sends at 9:00."
+    expected_source_paths: [kb/23030854655890-legacy-notifications.md]
+  - id: kb-023
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "What are the legacy notification priority SLAs?"
+    expected_answer: "Normal priority ≤60 minutes, high priority ≤10 minutes. Scheduled jobs use the base domain the Superadmin was logged into at creation time."
+    expected_source_paths: [kb/23030854655890-legacy-notifications.md]
+
+  # ── Events and conditions (4429113070226) ───────────────────────────────
+  - id: kb-030
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "How do digest notifications differ between end users and admins?"
+    expected_answer: "Item shortcodes go between {{#items}}/{{/items}}; end users receive one digest, while Superadmins/Power Users receive one digest per user. 'Digest: Learner has yet to complete a course' only includes enrollments from the past year."
+    expected_source_paths: [kb/4429113070226-notification-events-and-conditions.md]
+  - id: kb-031
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "When does 'Subscription record has almost exhausted capacity' fire?"
+    expected_answer: "At ≥80% of the record's seats."
+    expected_source_paths: [kb/4429113070226-notification-events-and-conditions.md]
+  - id: kb-032
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "Is 'ILT event starting' sent when the session has no enrolled learners?"
+    expected_answer: "No — the event is not triggered when the session has no enrolled learners. Similarly, 'Decommissioned courses' sends 90 days before decommissioning, and 'User has not logged in' excludes PUs/Superadmins."
+    expected_source_paths: [kb/4429113070226-notification-events-and-conditions.md]
+  - id: kb-033
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "Where do I enable the enrollment-time digest option for massive enrollments?"
+    expected_answer: "Advanced settings > Advanced options > 'Send immediate notification digest on massive enrollment action' — the digest option only appears once this flag is set."
+    expected_source_paths: [kb/4429113070226-notification-events-and-conditions.md]
+
+  # ── Shortcodes (22129375193362) ─────────────────────────────────────────
+  - id: kb-040
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "Does {{user_password}} insert the user's password?"
+    expected_answer: "Never — it is always replaced by a 'Reset your password' link (two-step email flow)."
+    expected_source_paths: [kb/22129375193362-shortcodes-in-notifications.md]
+  - id: kb-041
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "Why isn't {{course_link}} clickable, and is it a deep link?"
+    expected_answer: "Link shortcodes insert plain-text URLs — clickable links require the Insert/edit link toolbar button or <a href=\"{{course_link}}\"> in source mode. It's not a deep link: non-enrolled users get an error, and the landing page depends on user level and login state."
+    expected_source_paths: [kb/22129375193362-shortcodes-in-notifications.md]
+  - id: kb-042
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "What does {{event_date}} render for ILT events?"
+    expected_answer: "Event name, date, start/end times in BOTH the learner's and the event's time zones, plus location/classroom or 'virtual'. {{session_dates}} includes ALL session events, even past ones."
+    expected_source_paths: [kb/22129375193362-shortcodes-in-notifications.md]
+  - id: kb-043
+    status: draft
+    agent: notification-expert
+    namespace: product-kb
+    question: "How does {{extend_enterprise_logo}} work?"
+    expected_answer: "It dynamically inserts the recipient platform's logo, but must be embedded in an <img src=...> tag to render. Note: users in nested child branches may receive links using the parent domain's base URL (still accessible)."
+    expected_source_paths: [kb/22129375193362-shortcodes-in-notifications.md]
+
+  # ── Extended Enterprise (360020124899) ──────────────────────────────────
+  - id: kb-050
+    status: draft
+    agent: domains-expert
+    namespace: product-kb
+    question: "What is an Extended Enterprise client and how is one created?"
+    expected_answer: "A branch + URL pairing, created via Configuration (spanner icon) > Platform setup and tools > Extended enterprise management > New client; activation requires contacting your Account Manager. One EE client per branch; URLs are subfolder-type or domain-type."
+    expected_source_paths: [kb/360020124899-managing-the-extended-enterprise-app.md]
+  - id: kb-051
+    status: draft
+    agent: domains-expert
+    namespace: product-kb
+    question: "What does 'Enable extended enterprise login restriction' change?"
+    expected_answer: "Checked: wrong-domain logins get a generic 'wrong credentials' error. Unchecked: users see the 'Select multidomain' page. Already-logged-in users always see the multidomain page; Superadmins are exempt."
+    expected_source_paths: [kb/360020124899-managing-the-extended-enterprise-app.md]
+  - id: kb-052
+    status: draft
+    agent: domains-expert
+    namespace: product-kb
+    question: "Can Extended Enterprise partition the platform into independently administered instances?"
+    expected_answer: "No — Superadmins always see the whole platform. Also note: root-level 'Force External SSO' supersedes per-domain SSO settings, and with custom settings off the course player defaults to Dark mode (an exception to root inheritance)."
+    expected_source_paths: [kb/360020124899-managing-the-extended-enterprise-app.md]
+
+  # ── Email sender domains (14656947588114) ───────────────────────────────
+  - id: kb-060
+    status: draft
+    agent: domains-expert
+    namespace: product-kb
+    question: "How many email sender domains can a platform have, and which domain levels?"
+    expected_answer: "Up to 500 email sender domains, levels 2nd–5th. @docebo.com sender addresses can no longer be used. Menu: Configuration > Platform setup and tools > Domain management > Email sender domains."
+    expected_source_paths: [kb/14656947588114-domain-management-configuring-email-domains.md]
+  - id: kb-061
+    status: draft
+    agent: domains-expert
+    namespace: product-kb
+    question: "Why must the email sender domain differ from the custom/secondary domain?"
+    expected_answer: "CNAME (custom domain) and SPF (sender domain) DNS records conflict on the same name — use a sibling or 4th-level domain for senders. Docebo won't investigate delivery issues for domains lacking SPF, DKIM and MX records."
+    expected_source_paths: [kb/14656947588114-domain-management-configuring-email-domains.md, kb/360020084060-managing-the-custom-domain-app.md]
+  - id: kb-062
+    status: draft
+    agent: domains-expert
+    namespace: product-kb
+    question: "Which SMTP encryption/port pairing should Microsoft 365 users choose?"
+    expected_answer: "StartTLS on port 587 (TLS implicit is port 465) — wrong pairing fails the connection test. Re-testing after save requires re-entering the SMTP password or using ellipsis > Check validation. Microsoft 365 SMTP is discouraged for high volume."
+    expected_source_paths: [kb/14656947588114-domain-management-configuring-email-domains.md]
+  - id: kb-063
+    status: draft
+    agent: domains-expert
+    namespace: product-kb
+    question: "What happens to email delivery if a sender domain is deleted?"
+    expected_answer: "Its emails route through the untrusted SMTP gateway with no delivery guarantee."
+    expected_source_paths: [kb/14656947588114-domain-management-configuring-email-domains.md]
+
+  # ── Custom Domain app (360020084060) ────────────────────────────────────
+  - id: kb-070
+    status: draft
+    agent: domains-expert
+    namespace: product-kb
+    question: "What are the naming rules for a custom domain?"
+    expected_answer: "Enter it with the www prefix; names containing 'docebo', 'dcbstatic.com', or capital letters are rejected. Second-level domains unsupported since Nov 1, 2021; 4th-level strongly discouraged (HTTPS certificate problems). Third-level domains need only a CNAME to yourcompany.docebosaas.com."
+    expected_source_paths: [kb/360020084060-managing-the-custom-domain-app.md]
+  - id: kb-071
+    status: draft
+    agent: domains-expert
+    namespace: product-kb
+    question: "What breaks when a custom domain lacks an SSL certificate?"
+    expected_answer: "User impersonation for Superadmins/PUs can break, and Docebo Support access is hindered. Note the app itself is deprecated: with Domain Management active it redirects there."
+    expected_source_paths: [kb/360020084060-managing-the-custom-domain-app.md]
+
+  # ── Cross-article routing checks ─────────────────────────────────────────
+  - id: kb-080
+    status: draft
+    agent: supervisor          # should chain notification-expert + domains-expert
+    namespace: product-kb
+    question: "Our EE customer's notification emails link to the wrong domain and some also fail to send — what should I check?"
+    expected_answer: "Two axes: (1) base URL — nested child-branch users may get parent-domain links; new service auto-inserts per-recipient base URLs, check branch filters / single-notification setup; (2) email delivery — verify sender domain SPF/DKIM/MX, no CNAME/SPF conflict with the custom domain, and custom SMTP responding within 15s (failed sends are not retried)."
+    expected_source_paths: [kb/22129375193362-shortcodes-in-notifications.md, kb/14656947588114-domain-management-configuring-email-domains.md, kb/360020126259-configuring-notifications.md]
+
+  # ══ internal-docs (Confluence-grounded) ══════════════════════════════════
+  # ── Enable notifications in local environment (HYD 4044456058) ──────────
+  - id: cf-001
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "How do I enable notifications in my local hydra environment?"
+    expected_answer: "Via the wand CLI: `wand notifications install` (plus `clean` and `health`). Prerequisite: your team's AWS ID whitelisted in scripts/commands/notifications.sh of the local-environment repo, and you must be logged into AWS via Leapp (the SQS queue is Terraform-deployed). Install creates a personal SQS queue, a unique DEV ID, a redis identifier variable, a proxy container and a consumer container."
+    expected_source_paths: [confluence/4044456058-enable-notifications-in-local-environment.md]
+  - id: cf-002
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "wand notifications install returns HTTP 403 — what's wrong?"
+    expected_answer: "You are not connected to the Leapp AWS account. Related gotcha: SNS 'Subscribe ... StatusCode 400' means wrong region — must be us-east-1."
+    expected_source_paths: [confluence/4044456058-enable-notifications-in-local-environment.md]
+  - id: cf-003
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "Hydra logs show DST token errors when using local notifications — fix?"
+    expected_answer: "Set AWS credentials in the redis variables SECRETS_MANAGER_AWS_KEY and SECRETS_MANAGER_AWS_SECRET."
+    expected_source_paths: [confluence/4044456058-enable-notifications-in-local-environment.md]
+
+  # ── Notification product API with DST (HYD 5368316863) ──────────────────
+  - id: cf-010
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "Which DST claims are mandatory (fixed values) to call the notification-be Product API?"
+    expected_answer: "Per code (DstLambdaAuthorizer, @docebo/dst-validator-lmbauth-be): aud=\"notification\" is validated; required claims are exactly tid, iid, pty; sub must be \"notification\" (it resolves the signing-key path dst_${sub}/public_key). iss is the calling product's code (e.g. lms) — NOT staff.support, which is only used outbound when notification-be mints DSTs to call products. scope=\"paas\" and ver=2 are set by dstGenerator by convention but NOT validated; uid is not required. NOTE: the Confluence page overstates the requirements — code is authoritative."
+    code_verified: refuted-doc-corrected
+    code_refs: [notification-be/infrastructure/lib/nested/product.stack.ts, paas-notification-meta/src/shared/dstGenerator.ts, notification-be/backend/shared/services/dst-generator.service.ts]
+    expected_source_paths: [confluence/5368316863-how-to-call-the-notification-product-api-with-dst.md]
+
+  # ── Messenger handlers (HYD 3688792065) ──────────────────────────────────
+  - id: cf-020
+    status: draft
+    agent: messenger-expert
+    namespace: internal-docs
+    question: "What does the Messenger microservice own vs the PaaS Notification service?"
+    expected_answer: "Messenger owns CRUD on notification entities in the Hydra DB, plus callbacks for recipient retrieval (immediate + scheduled), shortcode value retrieval, and provisioning of schedules for event-engine setups. PaaS Notification is product-agnostic: it owns meta definitions, tenant setups, and delivery — it deliberately does NOT handle notification filters or recipient types (those are Hydra/LMS business concepts, e.g. the paas_notification_course_filter table with item_id/setup_notification_id lives in Hydra)."
+    code_verified: confirmed
+    code_refs: [hydra/backend/shared/models/PaasNotificationCourseFilter.php, hydra/backend/migrations/m230328_145827_CREATE_PAAS_NOTIFICATION_TABLES.php]
+    expected_source_paths: [confluence/3688792065-messenger-microservice-the-notification-handlers.md]
+  - id: cf-021
+    status: draft
+    agent: messenger-expert
+    namespace: internal-docs
+    question: "What are the three Messenger callback endpoints and who invokes each?"
+    expected_answer: "CallbackAction (/messenger/v1/notification/callback) — Event Bus entry point, builds ImmediateNotificationEvent and rejects event types not in PaasNotificationEventsDictionary. PollingAction (/messenger/v1/scheduler/polling) — invoked by the PaaS Notification Poller; note it returns only {success: bool} — schedules are pushed asynchronously by PollingFunction.sendSchedules() in chunks, not in the HTTP response (doc slightly misleading here). WakeUpAction (/messenger/v1/scheduler/wakeup) — invoked by Notification PaaS for scheduled deliveries, unserializes a SchedulerPubEvent. CallbackAction and WakeUpAction are behind @toggle release/weekly/paas/notifications; PollingAction is not."
+    code_verified: partial-doc-corrected
+    code_refs: [hydra/backend/apps/messenger/modules/api/v1/actions/notification/CallbackAction.php, hydra/backend/apps/messenger/modules/api/v1/actions/scheduler/PollingAction.php, hydra/backend/apps/messenger/modules/api/v1/functions/PollingFunction.php]
+    expected_source_paths: [confluence/3688792065-messenger-microservice-the-notification-handlers.md]
+  - id: cf-022
+    status: draft
+    agent: messenger-expert
+    namespace: internal-docs
+    question: "What replaced the legacy NotificationJobHandler, and what's the test convention for new notification types?"
+    expected_answer: "The handler layer under apps/messenger/components/handler. NotificationHandlerFactory fallbacks: immediate → DefaultHydraImmediateEventHandler; scheduled AND event-provider paths → DefaultHydraScheduledEventProviderHandler (DefaultHydraScheduledEventHandler is a base class concrete handlers extend, never a factory default — doc drift). Per-event override via MessengerNotificationHandlerProvider.registerNotificationHandlerForEvent / EVENT_COLLECT_NOTIFICATION_HANDLER / HandlerCollector registry. NotificationJobHandler survives only as legacy string constants (CoreNotification::NOTIFICATION_JOB_HANDLER_ID) — no class exists. Tests: apps/messenger/tests/functional/suite/components/handler/{NotificationTypeCode}/ (123 folders, e.g. UserSubscribedCourse with Immediate/Scheduled/EventProvider/MultiDomain tests)."
+    code_verified: partial-doc-corrected
+    code_refs: [hydra/backend/apps/messenger/components/handler/handlers/NotificationHandlerFactory.php, hydra/backend/apps/messenger/components/handler/handlers/HandlerCollector.php, hydra/backend/apps/messenger/tests/functional/suite/components/handler/]
+    expected_source_paths: [confluence/3688792065-messenger-microservice-the-notification-handlers.md]
+
+  # ── Manage Notification Meta, Group and Templates (HYD 3688956071) ──────
+  - id: cf-030
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "Which endpoints register a product, group, and meta with notification-be?"
+    expected_answer: "POST /api/notification/registration/v1/product (product.json), /api/notification/registration/v1/notification_group (group.json), /api/notification/registration/v1/meta. For meta the payload is meta.json PLUS injected notificationGroupId (resolved/created by Executor) and productCode — {...{notificationGroupId, productCode}, ...meta}, spread order means meta.json keys would win. The Confluence page says 'minus' those fields — that's backwards; code is authoritative (both are required by NotificationMetaPostDto). All called by paas-notification-meta."
+    code_verified: refuted-doc-corrected
+    code_refs: [paas-notification-meta/src/metaNotification/metaNotification.ts, paas-notification-meta/src/shared/executor.ts, notification-be/backend/shared/dto/product/meta/notification-meta-post.dto.ts]
+    expected_source_paths: [confluence/3688956071-manage-notification-meta-group-and-templates.md]
+  - id: cf-031
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "How do notification metas reach an environment after an MR to paas-notification-meta?"
+    expected_answer: "MR → new npm version of @docebo/paas-notification-meta → notification-be pipeline job named create-metas (NOT create-notification-meta — doc drift) runs after deploy-dev, gated by CREATE_NOTIFICATION_META=='true', executing manageNotificationMeta -a UPSERT for THREE products: lms, peerboard, integrationLogging. Templates via the separate manual job create-templates (allow_failure) with -t true. CLI flags: -g/-n filter by group/type code (-n requires -p), plus -d installation_id (default 1)."
+    code_verified: partial-doc-corrected
+    code_refs: [notification-be/.gitlab-ci.yml, notification-be/deploy.integration.yml, paas-notification-meta/src/manageNotificationMeta.ts]
+    expected_source_paths: [confluence/3688956071-manage-notification-meta-group-and-templates.md]
+  - id: cf-032
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "What are the meta permission fields, and what's the change-ordering rule between notification-be and Luthien?"
+    expected_answer: "Four columns (snake_case in DB): user_can_enable, user_can_view, user_can_delete from the first migration, user_can_create added later (20240118102360); all four required camelCase fields in NotificationMetaPostDto. Ordering rule per docs: modify notification-be first, then Luthien; on-the-fly meta edits before compiling (process convention — not code-enforceable)."
+    code_verified: partial-doc-corrected
+    code_refs: [notification-be/backend/migrations/src/migrations/20210712115131-first-migration.ts, notification-be/backend/migrations/src/migrations/20240118102360-notificationmeta-cancreate.ts]
+    expected_source_paths: [confluence/3688956071-manage-notification-meta-group-and-templates.md]
+
+  # ── Messenger architecture & validation (HYD 3686269080, 3688890498, 3687350290, 3687022702) ──
+  - id: cf-040
+    status: draft
+    agent: messenger-expert
+    namespace: internal-docs
+    question: "How does LMS code trigger a PaaS notification event, and what gates it?"
+    expected_answer: "Yii::$app->messenger->triggerNotificationEvent(string $eventType, array $payload, ?int $authorId = null) — the call only buffers (no-op unless the listener is active). Gated by TWO toggles ANDed (doc mentions only one): Toggle::TOGGLE_PAAS_NOTIFICATIONS ('release/weekly/paas/notifications') AND Toggle::TOGGLE_PAAS_NOTIFICATION_ENABLE_TRIGGERS. The event must resolve via PaasNotificationEventsDictionary::getPaasNotificationEventType() — keys mix EventManager::EVENT_*/NTYPE_* and CoreNotification::NTYPE_* constants, and an already-PaaS name is accepted too; runtime extension via addPaasNotificationEvent()."
+    code_verified: partial-doc-corrected
+    code_refs: [hydra/backend/shared/components/messenger/MessengerComponent.php, hydra/backend/shared/components/feature/Toggle.php, hydra/backend/shared/components/messenger/PaasNotificationEventsDictionary.php, hydra/backend/plugins/NotificationApp/NotificationApp.php]
+    expected_source_paths: [confluence/3688890498-how-to-trigger-an-event.md]
+  - id: cf-041
+    status: draft
+    agent: messenger-expert
+    namespace: internal-docs
+    question: "Walk me through the Messenger validation ('Supervisor') flow for a triggered event."
+    expected_answer: "Events buffer in MessengerEventCollector (in-process array) → the collector class MessengerListener (NOT MessengerListenerService — doc drift) hooks Application::EVENT_AFTER_REQUEST and runs supervise() → CollectCustomNotificationsValidation (value of EventManager::EVENT_COLLECT_NOTIFICATION_VALIDATION) fires only when candidates exist → HydraSupervisor::executeGuard(MessengerNotificationEvent) returns SupervisorResponse (approved ids; rejected entries are arrays {id, rejectedFilters, filterType}) → approved setups dispatch event-bus NotificationEvent ('platform.events.messenger.NotificationEvent') with payload keys event_type, notification_ids, event_data, id_author, normalized_event (NOT notifications_setup_ids), dispatched ONE EVENT PER SETUP ID in chunks of 5. Four defaults registered by NotificationApp plugin (not MessengerComponent::init): HydraValidationHandler, HydraValidationProvider, HydraSupervisor, HydraNormalizer. HydraNormalizer takes a MessengerNotificationEvent object (not a raw array) and returns HydraMessengerNormalizedNotificationEvent (fields: userId, courseId, learningPlanId, sessionId, groupId, branchId, sessionDateId, contestId)."
+    code_verified: partial-doc-corrected
+    code_refs: [hydra/backend/shared/components/messenger/listener/MessengerListener.php, hydra/backend/shared/services/messenger/validation/domain/HydraSupervisor.php, hydra/backend/plugins/NotificationApp/NotificationApp.php, hydra/backend/vendor/docebo/events/src/Docebo/Events/apps/messenger/NotificationEvent.php]
+    expected_source_paths: [confluence/3687350290-messenger-validation-service-aka-supervisor.md, confluence/3686269080-messenger-architecture.md]
+  - id: cf-042
+    status: draft
+    agent: messenger-expert
+    namespace: internal-docs
+    question: "How do I add a custom validator for a new notification event type?"
+    expected_answer: "Register a callback on EventManager::EVENT_COLLECT_NOTIFICATION_VALIDATION, then use MessengerValidationService methods: registerSupervisor, registerValidationProvider, registerNormalizer, registerHandler (all accept string|array event names). setValidation is NOT on the service (doc drift) — it lives on HydraValidationProvider, reached via getValidationProvider($event)->setValidation(type, validator). Custom validators extend AbstractValidation and normally implement ONLY getFilters(array $notificationIds) — matchEntities() already has a generic array_intersect implementation in the base class. Hydra ships courseValidation/learningPlanValidation/groupValidation/branchValidation. Live example: NotificationApp::registerCustomPaasValidation() registers MultiBranchesNormalizer/MultiBranchSupervisor for newUserCreated."
+    code_verified: partial-doc-corrected
+    code_refs: [hydra/backend/shared/components/messenger/services/MessengerValidationService.php, hydra/backend/shared/services/messenger/validation/validators/AbstractValidation.php, hydra/backend/shared/services/messenger/validation/domain/HydraValidationProvider.php]
+    expected_source_paths: [confluence/3687022702-how-to-customize-and-extend-the-messenger-validation-components.md]
+  - id: cf-043
+    status: draft
+    agent: messenger-expert
+    namespace: internal-docs
+    question: "What are the three migration paths when porting a legacy notification, and which one handles 'X hours before/after'?"
+    expected_answer: "Immediate (dictionary + trigger points + validation + Notification Handler), Recurring (Scheduled Notification Handler only), Event (Polling Handler + Wake-Up Handler). 'X hours before/after' configurability must use the Event path. Gotchas: PaasNotificationEventsDictionary exists in BOTH Legacy and Hydra codebases — update both; don't blindly remove old Yii events when adding trigger points."
+    expected_source_paths: [confluence/3818520647-porting-legacy-notifications.md]
+
+  # ── Notification backend integration & engine (PAAS 3407052831, 3134029869, 3258023941) ──
+  - id: cf-050
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "What happens when I DELETE a product from the notification registration API?"
+    expected_answer: "Returns 202. The cascade is Postgres FK-level (onDelete CASCADE from the first migration), not application logic: groups → metas → templates and setups. Gaps the doc doesn't mention: notification_setup_template's FK was explicitly dropped (20230516153445 migration) so setup templates are ORPHANED, not deleted; S3 template objects are NOT removed; DynamoDB mirrors other than the product table aren't cleaned. And if integrationType=PRODUCT, the delete removes the product AND all its modules."
+    code_verified: partial-doc-corrected
+    code_refs: [notification-be/backend/product-api/src/product/services/product.service.ts, notification-be/backend/migrations/src/migrations/20210712115131-first-migration.ts, notification-be/backend/migrations/src/migrations/20230516153445-setup-template-remove-fk.ts]
+    expected_source_paths: [confluence/3407052831-notification-backend-integration.md]
+  - id: cf-051
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "How often is a product's webhookCallbackScheduler polled, and which meta transports/triggers exist?"
+    expected_answer: "The setup-poller cron fires hourly at minute :01 UNCONDITIONALLY (the producer just returns early when no scheduled setup matches — doc's 'when at least one exists' describes the effect, not the trigger). The producer selects setups with notification_type=scheduled, engine=event, when∈{before,after}, enabled=true; the CONSUMER builds the callback URL baseUrl + product.webhookCallbackScheduler with DST auth. Transports are SIX: json, email, inPlatform, slack, pushNotification, calendar (added 2026-03, doc lists five). Triggers: immediate, delayed, scheduled.{after,before,every,MANUAL} (doc omits manual). 'webhookCallbackEnabled required for scheduled' is NOT enforced — it exists only as a TODO comment; the only validation is the inverse (webhookCallbackWakeup mandatory if webhookCallbackEnabled=true). Presigned URL confirmed (1h expiry, s3url field; exception: pushNotification templates live in the DB record)."
+    code_verified: partial-doc-corrected
+    code_refs: [notification-be/infrastructure/lib/components/scheduled-notifications/scheduler-polling.ts, notification-be/backend/notifications-engine/lambdas/poller-producer/src/services/poller-producer.service.ts, notification-be/backend/shared/enum/notification-transport.enum.ts, notification-be/backend/product-api/src/meta/validation/notification-meta.validation.ts]
+    expected_source_paths: [confluence/3407052831-notification-backend-integration.md]
+  - id: cf-052
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "What's the notification engine's AWS architecture?"
+    expected_answer: "Every notification starts with an EventBridge event; rules split by priority → SQS → Lambda composes messages with MUSTACHE templates (mustache ^4.2.0 with custom XSS-hardening escape; 'Moustache' spelling appears nowhere in code) → per-transport SNS topics (or Aurora writes for inbox). Backup: EventBridge rule → Firehose → S3 in Parquet, queryable via Athena/Glue. Aurora Serverless (Postgres) via the Data API, sequelize migrations; APIs Express + TSOA behind serverless-express; shared code as a Lambda Layer; CDK v2 nested stacks. Built with beSharp."
+    code_verified: confirmed
+    code_refs: [notification-be/backend/notifications-engine/lambdas/notification-handler/src/services/mustache.service.ts, notification-be/backend/notifications-engine/package.json]
+    expected_source_paths: [confluence/3134029869-notification-engine-introduction-eventbridge.md, confluence/3258023941-project-structure-technical-deep-dive.md, confluence/3112534017-notifications-architecture.md]
+
+  # ── Scheduled notifications & delivery status (PAAS 5412880531, 5423235160) ──
+  - id: cf-060
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "Describe the wake-up scheduler: queue, state machine, and retry policy."
+    expected_answer: "wakeup-producer queries DynamoDB GSI schedules-by-status (pk status, sk wakeup_target_time, boundary now+60s), dedupes (GSI is eventually consistent), claims schedules via conditional Put (compare-and-swap on status+schedule_id), groups by productCode-suiteId-installationId, chunks of 10 → ${envName}-sqs-wakeupQueue.fifo (visibility 900s, RETENTION 15 MIN, maxReceiveCount 10; DLQ is ${envName}-sqs-wakeupDeadLetterQueue.fifo with 14-DAY retention — the 14 days belong to the DLQ, not the main queue). Consumer POSTs meta.webhookCallbackWakeup (from the META, not the product record) with DST auth, CALLBACK_TIMEOUT 300000ms, and dynamically rewrites the EventBridge rule to the next pending schedule time via PutRuleCommand. States (lowercase strings): to_wake_up → processing → waked_up, plus sent and retry_failed (doc omits 'sent'). Fault-tolerance: hourly, but keys off wakeup_target_time <= now - leewayHours (default 1h), RECURRING mode only, recomputes next wakeup AND resets failed_cb_count=0; rule inactive in develop/integration. Retries: non-hourly ≤8 (inclusive) with 2^failedCbCount-minute backoff then reschedule with counter reset; hourly max 4 (2+4+8+16=30 min) — BEFORE/AFTER go to retry_failed, EVERY reschedules. The 1000+2^r*15ms backoff applies only to the claimSchedule DynamoDB path (generic batch writes use 2^r*15 without the base). It's not a Step Functions state machine — pure enum + conditional writes."
+    code_verified: partial-doc-corrected
+    code_refs: [notification-be/infrastructure/lib/components/scheduled-notifications/scheduler-wake-up.ts, notification-be/backend/notifications-engine/lambdas/wakeup-producer/src/services/wakeup-producer.service.ts, notification-be/backend/notifications-engine/lambdas/wakeup-consumer/src/services/retry-strategy.service.ts, notification-be/backend/notifications-engine/lambdas/scheduler-fault-tolerance/src/services/scheduler-recovery.service.ts]
+    expected_source_paths: [confluence/5412880531-scheduled-notifications-architecture.md]
+  - id: cf-061
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "How does delivery status tracking work across providers (email/push)?"
+    expected_answer: "A deliveryId (uuidv4) is generated per recipient for FOUR transports — email, slack, pushNotification, calendar (doc says email/push only). Providers publish {delivery_status, more_information, delivery_id, suite_id, installation_id, date} to ${envName}-sns-delivery-status-topic (external accounts via environment.snsDeliveryPublishAccounts; mailer-service-be publishes via DeliveryStatusService using env var DELIVERY_STATUS_SNS_ARN — notification-be calls the same topic DELIVERY_STATUS_SNS_TOPIC_ARN, don't conflate). Topic → Firehose via SNS FIREHOSE subscription protocol (rawMessageDelivery, no lambda): real names carry '-log': ${envName}-firehose-delivery-status-log-stream, ${envName}-glue-delivery-status-log-table (60s/128MB, Parquet, partitions suite_id/installation_id/datehour). NO dedicated Athena workgroup exists (doc drift) — queries run in ${envName}-athena-user-log-workgroup, same bucket/database as user logs. Statuses queued/delivered/failed, but the SNS wire enum has only delivered/failed — 'queued' is log/API-side. deliveryStatus is a QUERY-STRING array param on POST /notification/log/v1/logs/queries, Superadmin-only. Mailer gotcha: publishing is gated by ENABLE_STATUS_LOOPBACK_DATETIME."
+    code_verified: partial-doc-corrected
+    code_refs: [notification-be/infrastructure/lib/components/delivery-status/delivery-status.component.ts, notification-be/infrastructure/lib/components/logging-system/logging-system.component.ts, mailer-service-be/app/src/services/deliveryStatusService.ts, notification-be/backend/shared/models/sns-delivery-status.model.ts]
+    expected_source_paths: [confluence/5423235160-notification-delivery-status-tracking.md]
+
+  # ── Frontend integration (PAAS 3406954523) ──
+  - id: cf-070
+    status: draft
+    agent: notification-expert
+    namespace: internal-docs
+    question: "How does a product embed the notification admin UI?"
+    expected_answer: "Angular 16 library notifications-admin (@ngrx/store ~16): configure via DcbNANotificationsAdminConfigProvider + DcbNAModule.forRoot with IDcbNANotificationEngineConfig (exactly two URLs: apiBaseUrl, umBaseUrl) and permissions canViewLogs/canCreate/canView/canUpdate/canDelete. Components: <dcb-na-management> and <dcb-na-edit-notification> on route edit/:notificationId guarded by DcbLECanDeactivateGuard. Known doc inconsistency: npm i @docebo/notification-admin vs npm link @docebo/notifications-admin."
+    expected_source_paths: [confluence/3406954523-notification-frontend-integration.md]
+
+# ── Pending sections ────────────────────────────────────────────────────────
+# Layer 3 (identified, not fetched): How to create a new Notification Handler
+#   (HYD 3688398937), Scheduled Notification Handler (HYD 3692396565), Handlers for
+#   Notification with Event Engine (HYD 3818062140), How to register a product or a
+#   module (PAAS 3436838985), Legacy Migration Walkthrough (HYD 4111368223).
+# svc-* (repo-grounded): to be drafted after Phase 1 indexing, so expected_source_paths
+#   can reference actual indexed chunks.
+# Excluded from grounding: HYD 3992518747 (links unpublished drafts only),
+#   PAAS 3191767068 (children macro), PAAS 3803578650 eMailer Service (image-only),
+#   ER diagram 3112927233 (SVG attachment only, no textual schema).

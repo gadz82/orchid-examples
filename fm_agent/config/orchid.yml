@@ -1,0 +1,35 @@
+# orchid.yml — FM Agent configuration
+#
+# Phase 0 scaffold: runtime config only (no agents, no auth, no upload).
+# Agents are registered at startup via config/agents.yaml.
+
+# ── Agents ────────────────────────────────────────────────────
+agents:
+  config_path: examples/fm_agent/config/agents.yaml
+
+# ── LLM ───────────────────────────────────────────────────────
+llm:
+  model: gemini/gemini-flash-latest
+
+# ── RAG / Vector DB ──────────────────────────────────────────
+rag:
+  vector_backend: qdrant
+  qdrant_url: http://qdrant:6333
+  embedding_model: gemini/gemini-embedding-001
+  graph_backend: neo4j
+  neo4j_uri: bolt://neo4j:7687
+  neo4j_user: ${NEO4J_USER:-neo4j}
+  neo4j_password: ${NEO4J_PASSWORD:-Password123}
+
+# ── Chat persistence ─────────────────────────────────────────
+storage:
+  class: orchid_storage_postgres.OrchidPostgresChatStorage
+  dsn: postgresql://orchid:${POSTGRES_PASSWORD:-orchid}@postgres:5432/orchid
+
+# ── Observability ─────────────────────────────────────────────
+tracing:
+  langsmith_tracing: false
+
+# ── Startup hook (Phase 3 — registers recency_hybrid strategy) ─
+startup:
+  hook: examples.fm_agent.hooks.startup.bootstrap_fm_strategies
