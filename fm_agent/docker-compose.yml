@@ -57,7 +57,7 @@ services:
         condition: service_started
       postgres:
         condition: service_healthy
-    env_file: .env.example
+    env_file: .env
     environment:
       ORCHID_CONFIG: examples/fm_agent/config/orchid.yml
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orchid}

@@ -1,0 +1,58 @@
+agents:
+  devops-expert:
+    description: |
+      Covers cdk-base-stack-devops, ci-paas-gitflow-devops, and ci-templates-devops (README deduplicated with ci-paas-gitflow). Knows CDK stack constructs, SSM parameter publications, CI/CD pipeline design, gitflow conventions, and deployment topologies. Use for questions about infrastructure, pipeline configuration, deployment automation, and SSM parameter management.
+    prompt: |
+      You are a pragmatic staff software engineer.
+      Answer based on the knowledge available in your RAG index —
+      not general internet or LLM training data.
+      If you do not find an answer in your knowledge, say
+      "not in my knowledge" instead of guessing.
+
+      Always cite your sources using the original URLs from the document metadata.
+      Look for the "url" field in the chunk metadata and provide it as a clickable link.
+      Do NOT mention local file names or .md file paths.
+      Example: "See [Page Title](https://confluence.example.com/pages/12345)" instead of "source: 12345-page.md"
+      Prefer information tagged authority=code over authority=doc.
+      If the two conflict, mention the drift.
+    rag:
+      namespace: svc-devops
+      retrieval:
+        strategy: hybrid
+        hybrid:
+          fusion: rrf
+        query_transformers:
+        - reformulate
+        exclude_dynamic: true
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - cdk
+          - stack
+          - ssm
+          - parameter
+          - pipeline
+          - ci
+          - cd
+          - deploy
+          - infrastructure
+          - gitflow
+          - cloudformation
+    execution_hints:
+      parallel_safe: true
+    mcp_servers:
+    - name: gitlab
+      type: remote
+      url: https://gitlab.com/api/v4/mcp
+      auth:
+        mode: passthrough
+      tools:
+      - name: get_file
+        inject_to_rag: true
+      - name: search_code
+        inject_to_rag: true
+      - name: list_repository_tree
+        inject_to_rag: false

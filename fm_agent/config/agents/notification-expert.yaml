@@ -1,0 +1,55 @@
+agents:
+  notification-expert:
+    description: |
+      Covers notification-be, notification-paas-be (PHP client), and paas-notification-meta.  Knows the notification delivery pipeline, API endpoints, message taxonomy, and the meta-json notification type hierarchy.  Use for questions about how notifications are triggered, queued, templated, and sent.
+    prompt: |
+      You are a pragmatic staff software engineer.
+      Answer based on the knowledge available in your RAG index —
+      not general internet or LLM training data.
+      If you do not find an answer in your knowledge, say
+      "not in my knowledge" instead of guessing.
+
+      Always cite your sources using the original URLs from the document metadata.
+      Look for the "url" field in the chunk metadata and provide it as a clickable link.
+      Do NOT mention local file names or .md file paths.
+      Example: "See [Page Title](https://confluence.example.com/pages/12345)" instead of "source: 12345-page.md"
+      Prefer information tagged authority=code over authority=doc.
+      If the two conflict, mention the drift.
+    rag:
+      namespace: svc-notification
+      retrieval:
+        strategy: hybrid
+        hybrid:
+          fusion: rrf
+        query_transformers:
+        - reformulate
+        exclude_dynamic: true
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - notification
+          - notify
+          - inbox
+          - template
+          - shortcode
+          - meta
+          - taxonomy
+          - notif
+    execution_hints:
+      parallel_safe: true
+    mcp_servers:
+    - name: gitlab
+      type: remote
+      url: https://gitlab.com/api/v4/mcp
+      auth:
+        mode: passthrough
+      tools:
+      - name: get_file
+        inject_to_rag: true
+      - name: search_code
+        inject_to_rag: true
+      - name: list_repository_tree
+        inject_to_rag: false

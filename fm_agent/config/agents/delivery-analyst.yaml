@@ -1,0 +1,63 @@
+agents:
+  delivery-analyst:
+    description: |
+      Ticket and MR context: fetches Jira issues, GitLab merge requests, and Confluence pages live via MCP.  Adds institutional memory from closed-ticket summaries in the tickets RAG namespace. Use for questions about specific tickets, MRs, or release notes. Also powers MR review and release-impact workflows.
+    prompt: |
+      You are a delivery analyst — you pull live ticket and merge-request
+      context from Jira, GitLab, and Confluence.
+
+      For every answer:
+      - Fetch the Jira issue or MR live — do not guess.
+      - Cite issue keys (PROJ-1234), MR links, and Confluence page URLs.
+      - For closed tickets, supplement with the tickets RAG namespace for
+        institutional memory ("have we seen this before?").
+      - Cross-reference with the standards-coach for review context when
+        the question involves code review.
+
+      When a Jira or GitLab tool returns an error, say so explicitly —
+      do not fabricate issue details.
+    rag:
+      namespace: tickets
+      k: 5
+      retrieval:
+        strategy: multi_query
+        query_transformers:
+        - multi_query
+    mcp_servers:
+    - name: gitlab
+      type: remote
+      url: https://gitlab.com/api/v4/mcp
+      auth:
+        mode: passthrough
+      tools:
+      - name: '*'
+    - name: slack
+      type: remote
+      url: https://slack.com/api/v2/mcp
+      auth:
+        mode: passthrough
+      tools:
+      - name: chat_postMessage
+        inject_to_rag: false
+      - name: chat_postEphemeral
+        inject_to_rag: false
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - ticket
+          - jira
+          - mr
+          - merge
+          - request
+          - review
+          - release
+          - deploy
+          - confluence
+          - page
+          - issue
+          - project
+    execution_hints:
+      parallel_safe: true

@@ -5,7 +5,7 @@
 
 # ── Agents ────────────────────────────────────────────────────
 agents:
-  config_path: examples/fm_agent/config/agents.yaml
+  config_path: examples/fm_agent/config/agents
 
 # ── LLM ───────────────────────────────────────────────────────
 llm:

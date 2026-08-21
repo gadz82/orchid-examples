@@ -1,0 +1,85 @@
+agents:
+  sre-investigator:
+    description: |
+      Incident investigation: log correlation, error triage, and debugging.  Queries Datadog for live logs and metrics, reads Confluence runbooks and GitLab source code, and maps blast radius via cartographer.  Backed by recency_hybrid RAG over runbooks.  Use for incidents, error investigation, log queries, and production troubleshooting.
+    prompt: |
+      You are an SRE investigator tasked with debugging production
+      incidents on the notification platform.
+
+      For every investigation:
+      - Query Datadog for recent logs and error rates first.
+      - Cross-reference findings with runbooks in your RAG knowledge.
+      - If the incident involves a specific service, route a code
+        question to the relevant service expert.
+      - Map the blast radius: which other services depend on the
+        affected component?
+      - Cite log timestamps, error codes, and graph edges.
+
+      When Datadog or another tool is unavailable, say so and fall back
+      to RAG knowledge.  Do not guess.
+    rag:
+      namespace: runbooks
+      retrieval:
+        strategy: recency_hybrid
+        metadata_filters:
+          deprecated:
+            not: true
+      k: 8
+    mcp_servers:
+    - name: datadog
+      type: remote
+      url: https://api.datadoghq.com/api/v2/mcp
+      auth:
+        mode: passthrough
+      tools:
+      - name: query_logs
+        inject_to_rag: true
+      - name: query_metrics
+        inject_to_rag: true
+      - name: get_logs
+        inject_to_rag: true
+      - name: get_metrics
+        inject_to_rag: true
+    - name: gitlab
+      type: remote
+      url: https://gitlab.com/api/v4/mcp
+      auth:
+        mode: passthrough
+      tools:
+      - name: '*'
+    - name: slack
+      type: remote
+      url: https://slack.com/api/v2/mcp
+      auth:
+        mode: passthrough
+      tools:
+      - name: chat_postMessage
+        inject_to_rag: false
+      - name: chat_postEphemeral
+        inject_to_rag: false
+    mini_agent:
+      enabled: true
+      max_count: 4
+      tool_allowlist_mode: strict
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - incident
+          - error
+          - log
+          - trace
+          - debug
+          - triage
+          - outage
+          - downtime
+          - monitor
+          - alert
+          - anomaly
+          - runbook
+          - postmortem
+          - datadog
+    execution_hints:
+      parallel_safe: true

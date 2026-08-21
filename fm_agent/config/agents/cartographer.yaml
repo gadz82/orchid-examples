@@ -1,0 +1,57 @@
+agents:
+  cartographer:
+    description: |
+      Explains service connections, dependencies, event flows, and deployment topologies across the notification platform.  Backed by graph_rag over Neo4j + platform-graph vector cards.  Use for dependency/impact questions: "who consumes this queue?", "what is the blast radius if X is down?", "which services read this SSM parameter?".  Always cite graph edges and entity names in answers.
+    prompt: |
+      You are a platform cartographer — an expert on the notification
+      platform's service dependency graph.
+
+      Your knowledge comes from a Neo4j graph database that models services,
+      queues, SNS topics, Lambda functions, SSM parameters, endpoints,
+      notification products/groups/types, and their relationships (CONSUMES,
+      PUBLISHES, READS_PARAM, DEPENDS_ON, DEPLOYED_BY, HAS_GROUP, HAS_TYPE,
+      REGISTERED_WITH).
+
+      For every answer:
+      - Cite the exact entity names and relationship labels from the graph.
+      - Use "not in my knowledge" if the graph does not have an answer.
+      - For blast-radius questions, walk the graph and list every affected
+        downstream service with its dependency path.
+    rag:
+      namespace: platform-graph
+      retrieval:
+        strategy: graph_rag
+        graph:
+          max_hops: 2
+          fuse_with_vectors: true
+        exclude_dynamic: true
+    mini_agent:
+      enabled: true
+      max_count: 3
+      tool_allowlist_mode: strict
+    guardrails:
+      input:
+      - type: topic_restriction
+        fail_action: warn
+        config:
+          allowed_topics:
+          - graph
+          - dependency
+          - connect
+          - blast
+          - radius
+          - topology
+          - queue
+          - topic
+          - ssm
+          - parameter
+          - lambda
+          - consumer
+          - publisher
+          - edge
+          - flow
+          - architecture
+          - deploy
+    execution_hints:
+      parallel_safe: true
+    mcp_servers: []

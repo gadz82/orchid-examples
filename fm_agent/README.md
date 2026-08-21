@@ -95,99 +95,116 @@ docker compose --profile graph up --build
 docker compose down
 ```
 
-### Reindex
+### Indexing raw documents (orchid CLI)
 
-```bash
-# Docs pass — ingest READMEs, configs, OpenAPI specs
-fm-indexer docs /path/to/repo1 /path/to/repo2 ...
+Raw documentation is ingested with the framework's `orchid index` command — not a bespoke indexer. Source files are Markdown exports under `.knowledge/prompts/fm-agents/raw-input/`. Each file carries a YAML front-matter block that supplies the stable document id and metadata:
 
-# Cards pass — regenerate LLM module summaries
-fm-indexer cards /path/to/repo1 ...
+```markdown
+---
+page_id: "3191767068"
+title: "Notifications"
+space: PAAS
+url: https://example.atlassian.net/wiki/spaces/PAAS/pages/3191767068
+---
 
-# Graph pass — extract platform dependency graph into Neo4j
-fm-indexer graph /path/to/repo1 ...
-
-# KB pass — crawl Help Center sections
-fm-indexer kb
-
-# Prune vectors for deleted files
-fm-indexer prune /path/to/repo1 ...
+# Notifications
+...
 ```
 
-Or via API (requires `ALLOW_INDEX_ENDPOINT=true`):
+`orchid index dir` parses the front matter, chunks the body, embeds it, and writes the chunks into a Qdrant namespace. Re-runs are idempotent: a content-hash manifest skips unchanged files, `--prune` deletes vectors whose source file was removed.
+
+#### Prerequisites
+
 ```bash
-curl -X POST http://localhost:8080/indexer/run \
-  -H "Content-Type: application/json" \
-  -d '{"subcommand": "docs", "repo_paths": ["/path/to/repo"]}'
+pip install -e ./orchid -e ./orchid-cli
+export GEMINI_API_KEY=...   # embedding + chunking model
 ```
 
-### Ingest raw Markdown exports
+Run the commands from `workspace-py/` (the directory containing `examples/`, `orchid/`, and `orchid-cli/`). The `agents.config_path` inside `orchid.yml` and the `-c` flag are resolved relative to this directory.
 
-The framework `orchid index` command can ingest the Markdown exports under `.knowledge/prompts/fm-agents/raw-input/` with YAML front-matter parsing and idempotent re-runs.
-
-Each Markdown file should contain a YAML front-matter block with an identifier field (e.g. `page_id`, `article_id`). The command reads the front matter, chunks the body, embeds it, and writes it to the configured Qdrant namespace.
+When running from the host (outside Docker), the YAML's `rag.qdrant_url` (`http://qdrant:6333`) points at the container hostname — override it to the host-mapped port:
 
 ```bash
-# Confluence pages → runbooks namespace
+export QDRANT_URL=http://localhost:6333
+```
+
+#### Indexing Confluence pages
+
+```bash
 orchid index dir \
-  .knowledge/prompts/fm-agents/raw-input/confluence \
+  ../.knowledge/prompts/fm-agents/raw-input/confluence \
   -n runbooks \
   --front-matter \
   --id-field page_id \
-  -c workspace-py/examples/fm_agent/config/orchid.yml
+  -c examples/fm_agent/config/orchid.yml
+```
 
-# KB articles → product-kb namespace
+#### Indexing Help Center (KB) articles
+
+```bash
 orchid index dir \
-  .knowledge/prompts/fm-agents/raw-input/kb \
+  ../.knowledge/prompts/fm-agents/raw-input/kb \
   -n product-kb \
   --front-matter \
   --id-field article_id \
-  -c workspace-py/examples/fm_agent/config/orchid.yml
+  -c examples/fm_agent/config/orchid.yml
 ```
 
-Available raw-input directories:
+#### Source directory → namespace mapping
 
-| Directory | Target namespace | Recommended id-field |
+| Directory | Target namespace | Front-matter id field |
 |---|---|---|
 | `raw-input/confluence` | `runbooks` | `page_id` |
 | `raw-input/kb` | `product-kb` | `article_id` |
 
-Common flags:
+> `raw-input/evals/` contains eval fixtures, not documents — do not index it.
 
-| Flag | Purpose |
-|---|---|
-| `-n <namespace>` | Qdrant namespace to write into |
-| `--front-matter` | Parse YAML front matter for metadata and id |
-| `--id-field <key>` | Front-matter key to use as the document id |
-| `--prune` | Remove vectors whose source file no longer exists |
-| `--force` | Re-index even if the content hash hasn't changed |
-| `--manifest-dsn <dsn>` | Use PostgreSQL for the ingestion manifest (default: SQLite) |
+#### Idempotent re-run (recommended)
 
-Re-run idempotently: unchanged files are skipped, removed files are pruned, and new or modified files are indexed.
+Unchanged files are skipped, removed files are pruned, and new or modified files are re-indexed:
 
 ```bash
 orchid index dir \
-  .knowledge/prompts/fm-agents/raw-input/confluence \
+  ../.knowledge/prompts/fm-agents/raw-input/confluence \
   -n runbooks \
   --front-matter \
   --id-field page_id \
   --prune \
-  -c workspace-py/examples/fm_agent/config/orchid.yml
+  -c examples/fm_agent/config/orchid.yml
 ```
 
-Use a PostgreSQL manifest backend when running in a multi-replica or CI environment:
+#### PostgreSQL manifest (multi-replica / CI)
+
+The manifest defaults to a local SQLite file. Point it at Postgres when indexing from several machines:
 
 ```bash
 orchid index dir \
-  .knowledge/prompts/fm-agents/raw-input/confluence \
+  ../.knowledge/prompts/fm-agents/raw-input/confluence \
   -n runbooks \
   --front-matter \
   --id-field page_id \
   --manifest-dsn postgresql://orchid:orchid@localhost:5432/orchid \
-  -c workspace-py/examples/fm_agent/config/orchid.yml
+  -c examples/fm_agent/config/orchid.yml
 ```
 
-> **Note:** Run these commands from the workspace root (`workspace-py/`). Make sure `GEMINI_API_KEY` is exported and Qdrant is reachable.
+#### `orchid index dir` flags
+
+| Flag | Purpose |
+|---|---|
+| `-n, --namespace <name>` | Qdrant namespace to write into |
+| `-c, --config <path>` | Path to `orchid.yml` |
+| `--front-matter` | Parse YAML front matter for metadata and id |
+| `--id-field <key>` | Front-matter key used as the stable document id |
+| `--prune` | Delete vectors for source files that no longer exist |
+| `--force` | Re-index even when the manifest reports unchanged |
+| `--manifest / --no-manifest` | Toggle the idempotency manifest (default on) |
+| `--manifest-dsn <dsn>` | Manifest DB DSN — SQLite path or `postgresql://…` |
+| `--scope <tenant|shared|user>` | RAG scope (default `tenant`) |
+| `--tenant <id>` | Tenant id (default `default`) |
+| `--user <id>` | User id (required when `--scope user`) |
+| `--pattern <glob>` | Restrict files (e.g. `*.md`) |
+| `--chunk-size <n>` | Characters per chunk (default 1000) |
+| `--chunk-overlap <n>` | Chunk overlap (default 200) |
 
 ### Add an Agent
 
@@ -195,7 +212,7 @@ orchid index dir \
 2. Assign a `namespace`, `retrieval` strategy, and `topic_restriction` guardrail
 3. If the agent needs MCP tools, add `mcp_servers:` with tool allowlists
 4. Restart `agents-api`: `docker compose restart agents-api`
-5. Re-index if the agent has a new RAG namespace: `fm-indexer docs /path/to/new-repo`
+5. Index the agent's documents with `orchid index dir` (see "Indexing raw documents") if it has a new RAG namespace
 
 ### Secrets Rotation
 

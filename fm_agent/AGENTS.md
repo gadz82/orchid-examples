@@ -17,7 +17,9 @@ This file is the source of truth for AI agents working on the **FM Agent** Orchi
 
 | Layer | Key files | Responsibility |
 |---|---|---|
-| Config | `config/agents.yaml` | Agent definitions, RAG namespaces, MCP servers, skills, events/triggers |
+| Config | `config/orchid.yml` | Runtime config: LLM, RAG, storage, startup hook |
+| Config | `config/agents/_shared.yaml` | Defaults, supervisor, guardrails, skills, events/triggers, MCP gateway overrides |
+| Config | `config/agents/<agent>.yaml` | One dedicated file per agent (definition, RAG namespace, per-agent MCP servers) |
 | Startup | `hooks/startup.py` | Registers custom strategies/guardrails, runs MCP allowlist diff |
 | RAG strategies | `recency_strategy.py` | `recency_hybrid` retrieval strategy |
 | Guardrails | `secret_guardrail.py` | Secret-detection output guardrail |
@@ -49,12 +51,10 @@ Static service experts and `standards-coach` set `rag.retrieval.exclude_dynamic:
 
 ## MCP servers
 
-Configured in `agents.yaml`:
-
-- `gitlab` — passthrough, read tools + wildcard for sre/delivery analysts
-- `atlassian-rovo` — OAuth, read-only allowlist for Confluence/Jira
-- `datadog` — passthrough, read-only logs/metrics
-- `slack` — passthrough, `chat_postMessage` / `chat_postEphemeral`
+- `atlassian-rovo` — declared once in `config/agents/_shared.yaml` under `defaults.mcp_servers`, so it is available to **every** agent. OAuth, read-only allowlist for Confluence/Jira.
+- `gitlab` — passthrough, read tools + wildcard for sre/delivery analysts; declared per-agent where needed.
+- `datadog` — passthrough, read-only logs/metrics; declared only on `sre-investigator`.
+- `slack` — passthrough, `chat_postMessage` / `chat_postEphemeral`; declared on `sre-investigator` and `delivery-analyst`.
 
 `hooks/mcp_guard.py` diffs the configured Atlassian allowlist against advertised tools at startup. It is **fail-open**; connection failures are logged, not raised.
 
@@ -179,12 +179,13 @@ Current status: **110 unit tests pass**, **full ruff clean**.
 ## Common pitfalls
 
 1. **Do not edit `orchid/` framework code from this example.** If a framework change is needed, modify `workspace-py/orchid/` and verify `orchid-api/` / `orchid-cli/` still work.
-2. **YAML anchors:** after editing `agents.yaml`, always load it with `orchid_ai.config.loader.load_config` to confirm anchors resolve.
-3. **MCP auth modes:** keep `datadog` and `slack` as `passthrough`; `atlassian-rovo` remains `oauth`.
-4. **Slack tools:** only `chat_postMessage` and `chat_postEphemeral` are configured; do not add destructive tools.
-5. **BOM/encoding:** raw ingestion handles UTF-8 with BOM and whitespace front-matter.
-6. **RAG scoping:** always use `OrchidRAGScope`; never pass raw tenant filters.
-7. **Do not commit `.env`.**
+2. **Directory config:** agent configuration lives in `config/agents/`. The loader merges every `*.yaml` / `*.yml` file in that directory; defining the same agent name in two files raises an error.
+3. **Shared MCP servers:** `atlassian-rovo` is declared in `config/agents/_shared.yaml` under `defaults.mcp_servers`. To make another MCP server available fleet-wide, add it there rather than duplicating it in every agent file.
+4. **MCP auth modes:** keep `datadog` and `slack` as `passthrough`; `atlassian-rovo` remains `oauth`.
+5. **Slack tools:** only `chat_postMessage` and `chat_postEphemeral` are configured; do not add destructive tools.
+6. **BOM/encoding:** raw ingestion handles UTF-8 with BOM and whitespace front-matter.
+7. **RAG scoping:** always use `OrchidRAGScope`; never pass raw tenant filters.
+8. **Do not commit `.env`.**
 
 ## Planned work
 
