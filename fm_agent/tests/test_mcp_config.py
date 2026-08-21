@@ -13,7 +13,7 @@ class TestMCPConfig:
     @pytest.fixture
     def config(self):
         from pathlib import Path
-        path = Path(__file__).resolve().parent.parent / "config" / "agents.yaml"
+        path = Path(__file__).resolve().parent.parent / "config" / "agents"
         return load_config(str(path))
 
     def test_slack_server_present_with_send_only_tools(self, config) -> None:
@@ -81,8 +81,7 @@ class TestMCPConfig:
 
     def test_yaml_loads_without_error(self) -> None:
         from pathlib import Path
-        path = Path(__file__).resolve().parent.parent / "config" / "agents.yaml"
-        with open(path) as f:
-            data = yaml.safe_load(f)
-        assert "agents" in data
-        assert "slack" in {s["name"] for agent in data["agents"].values() for s in agent.get("mcp_servers", [])}
+        path = Path(__file__).resolve().parent.parent / "config" / "agents"
+        config = load_config(str(path))
+        assert "sre-investigator" in config.agents
+        assert "slack" in {s.name for agent in config.agents.values() for s in agent.mcp_servers}
