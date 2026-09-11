@@ -56,6 +56,18 @@ Static service experts and `standards-coach` set `rag.retrieval.exclude_dynamic:
 - `datadog` — passthrough, read-only logs/metrics; declared only on `sre-investigator`.
 - `slack` — passthrough, `chat_postMessage` / `chat_postEphemeral`; declared on `sre-investigator` and `delivery-analyst`.
 
+### Making passthrough servers work in local dev
+
+In `DEV_AUTH_BYPASS=true` mode the API uses a dummy bearer token (`dev-token`) for every request. Passthrough MCP servers (GitLab, Datadog, Slack) receive that token and reject it.
+
+To use a real token locally, set `DEV_BYPASS_TOKEN` in `.env`:
+
+```bash
+DEV_BYPASS_TOKEN=glpat-your_gitlab_personal_access_token
+```
+
+This token is forwarded to **all** passthrough MCP servers, so GitLab discovery/calls will work. Datadog/Slack may still fail unless the same token is valid for them; in practice this is most useful for testing one passthrough server at a time.
+
 `hooks/mcp_guard.py` diffs the configured Atlassian allowlist against advertised tools at startup. It is **fail-open**; connection failures are logged, not raised.
 
 ## Bloom (event-driven jobs)
