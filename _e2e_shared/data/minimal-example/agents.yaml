@@ -1,0 +1,8 @@
+supervisor:
+  assistant_name: "Test Assistant"
+
+agents:
+  greeter:
+    name: greeter
+    description: "A simple greeter agent."
+    prompt: "You are a greeter. Respond with a short greeting."

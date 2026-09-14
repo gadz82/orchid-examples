@@ -197,20 +197,20 @@ async def test_persist_configs(tmp_path):
         assert rows[1][0] == "toyota-expert"
         parsed = json.loads(rows[1][1])
         assert parsed["prompt"] == "P1"
-        assert parsed["rag"] == {}
+        assert parsed["rag"] == {"enabled": False}
 
 
 # ═══════════════════════════════════════════════════════════════
 # Config model tests
 # ═══════════════════════════════════════════════════════════════
 
-def test_config_storage_defaults_to_sqlite():
-    """OrchidConfigStorageConfig defaults to the SQLite backend."""
+def test_config_storage_defaults_are_empty():
+    """OrchidConfigStorageConfig defaults are empty until explicitly set."""
     from orchid_ai.config.schema_storage import OrchidConfigStorageConfig
 
     cfg = OrchidConfigStorageConfig(enabled=True)
-    assert "OrchidSQLiteConfigStorage" in cfg.class_path
-    assert cfg.dsn == "~/.orchid/chats.db"
+    assert cfg.class_path == ""
+    assert cfg.dsn == ""
 
 
 def test_config_storage_accepts_custom_class_path():

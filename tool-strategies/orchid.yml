@@ -27,7 +27,7 @@ auth:
 # ── Chat persistence (built-in SQLite) ───────────────────────
 storage:
   class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
-  dsn: /data/tool_strategies_chats.db
+  dsn: ${CHAT_DB_DSN:-/data/tool_strategies_chats.db}
 
 # ── Startup hook registers the custom ``priority`` strategy ──
 startup:

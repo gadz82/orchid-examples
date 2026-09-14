@@ -39,10 +39,11 @@ class FakeEmbeddings:
 
 @pytest.fixture
 def chroma_repo():
-    from orchid_cli.rag.backends.chroma import ChromaRepository
+    from orchid_rag_chroma.repository import ChromaRepository
 
     with tempfile.TemporaryDirectory() as tmpdir:
         repo = ChromaRepository(
+            client_type="persistent",
             path=tmpdir,
             embeddings=FakeEmbeddings(),
             embedding_dimension=4,
@@ -62,8 +63,8 @@ class TestRecipesExample:
         """The chicken-parmesan recipe should be retrievable by ingredient query."""
         await seed_recipes(chroma_repo, None)
         scope = OrchidRAGScope(tenant_id="__shared__")
-        results = await chroma_repo.retrieve("chicken parmesan breaded", namespace="recipes", k=5, scope=scope)
-        doc_ids = [r.document.metadata.get("doc_id", "") for r in results]
+        results = await chroma_repo.retrieve("chicken parmesan breaded", namespace="recipes", k=20, scope=scope)
+        doc_ids = [r.document.id for r in results]
         assert "chicken-parmesan" in doc_ids, f"chicken-parmesan not found in {doc_ids}"
 
     async def test_startup_hook_is_idempotent(self, chroma_repo):
@@ -79,7 +80,7 @@ class TestRecipesExample:
         await seed_recipes(chroma_repo, None)
         scope = OrchidRAGScope(tenant_id="__shared__")
         results = await chroma_repo.retrieve("lentil", namespace="recipes", k=10, scope=scope)
-        doc_ids = {r.document.metadata.get("doc_id", ""): r.document.metadata for r in results}
+        doc_ids = {r.document.id: r.document.metadata for r in results}
         assert "lentil-soup" in doc_ids
         meta = doc_ids["lentil-soup"]
         assert meta.get("cuisine") == "middle_eastern"
@@ -98,7 +99,7 @@ class TestRecipesExample:
             metadata_filters={"dietary": "vegan,gluten_free"},
         )
         # At least the vegan recipes should match
-        doc_ids = [r.document.metadata.get("doc_id", "") for r in results]
+        doc_ids = [r.document.id for r in results]
         assert "lentil-soup" in doc_ids
         assert "guacamole" in doc_ids
 

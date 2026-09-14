@@ -47,6 +47,7 @@ from orchid_api.events.producers.http import HTTPIngestionProducer
 from orchid_ai.events.queues.sqlite import SQLiteSignalQueue
 from orchid_ai.events.registry import build_registry_from_config
 from orchid_ai.events.runners.graph_runner import GraphJobRunner
+from orchid_ai.events.visibility import run_is_visible
 
 
 _HMAC_SECRET = "test-secret-do-not-use-in-prod"
@@ -300,3 +301,61 @@ async def test_bad_signature_returns_401(helpdesk_app) -> None:
     assert resp.status_code == 401
     signals = await helpdesk_app["storage"].signals.list()
     assert signals == []
+
+
+# ── 6. Cross-tenant visibility boundary ─────────────────────
+
+
+async def test_actor_run_not_visible_to_other_tenant(helpdesk_app) -> None:
+    """A JobRun minted for ``u-test-1`` in ``helpdesk-demo`` is visible
+    to that user but NOT to an admin in a different tenant."""
+    client: TestClient = helpdesk_app["client"]
+    payload = {
+        "type": "support.ticket.created",
+        "tenant_key": "helpdesk-demo",
+        "user_id": "u-test-1",
+        "occurred_at": "2026-05-06T09:00:00Z",
+        "payload": {
+            "ticket_id": "TKT-VIS",
+            "priority": "high",
+            "subject": "Visibility test",
+        },
+    }
+    body = json.dumps(payload).encode()
+    headers = {
+        "x-orchid-source": "ticketing-system",
+        "x-orchid-signature": _sign(body),
+        "idempotency-key": "TKT-VIS:created",
+        "content-type": "application/json",
+    }
+
+    resp = client.post("/signals", content=body, headers=headers)
+    assert resp.status_code == 202
+
+    await helpdesk_app["processor"].process_until_idle(
+        queue=helpdesk_app["queue"],
+        signal_store=helpdesk_app["storage"].signals,
+        triggers=helpdesk_app["registry"],
+        identity_resolver=helpdesk_app["resolver"],
+        job_store=helpdesk_app["storage"].jobs,
+        job_runner=helpdesk_app["runner"],
+    )
+
+    [run] = await helpdesk_app["storage"].jobs.list()
+
+    from orchid_ai.core.state import OrchidAuthContext
+
+    same_tenant_user = OrchidAuthContext(
+        access_token="t",
+        tenant_key="helpdesk-demo",
+        user_id="u-test-1",
+    )
+    assert run_is_visible(run, same_tenant_user) is True
+
+    other_tenant_admin = OrchidAuthContext(
+        access_token="t",
+        tenant_key="other-tenant",
+        user_id="u-admin",
+        roles={"admin"},
+    )
+    assert run_is_visible(run, other_tenant_admin) is False

@@ -27,7 +27,7 @@ class TestExternalCLIDelegationExample:
         assert agent_cfg.command == ["python", "-c"]
         assert agent_cfg.args == ["print('delegated response')"]
         assert agent_cfg.requires_approval is True
-        assert agent_cfg.timeout == 30
+        assert agent_cfg.timeout == 120
 
     def test_orchestrator_references_external_tool(self):
         config = load_config(str(_EXAMPLE_DIR / "agents.yaml"))

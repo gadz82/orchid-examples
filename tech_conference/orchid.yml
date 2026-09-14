@@ -38,7 +38,7 @@ upload:
 # ── Chat persistence ─────────────────────────────────────────
 storage:
   class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
-  dsn: /data/conference_chats.db
+  dsn: ${CHAT_DB_DSN:-/data/conference_chats.db}
 
 # ── Startup hook seeds knowledge into RAG ────────────────────
 startup:

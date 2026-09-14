@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 import yaml
 from orchid_ai.config.loader import load_config
 
 
+@pytest.mark.skipif(
+    os.environ.get("ATLASSIAN_CLIENT_ID") is None,
+    reason="FM Agent MCP config requires ATLASSIAN_CLIENT_ID",
+)
 class TestMCPConfig:
     """Cover MCP server auth modes and tool allowlists."""
 

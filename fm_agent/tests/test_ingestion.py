@@ -7,6 +7,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+pytest.importorskip("asyncpg")
+
 from examples.fm_agent.indexer.cards import (
     _build_endpoint_card,
     _extract_endpoint,

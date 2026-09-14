@@ -17,6 +17,7 @@ import json
 import logging
 from typing import Any
 
+from langchain_core.messages import AIMessage
 from orchid_ai.core.agent import OrchidAgent
 from orchid_ai.core.state import OrchidAgentState
 from orchid_ai.rag.scopes import OrchidRAGScope
@@ -83,7 +84,7 @@ class ReviewsAgent(OrchidAgent):
         try:
             sentiment_result = await self.call_builtin_tool("analyze_sentiment", text=query)
             logger.info("[reviews] Sentiment analysis: %s", sentiment_result.get("sentiment", "unknown"))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning("[reviews] Sentiment tool failed: %s", exc)
             sentiment_result = {"error": str(exc)}
 
@@ -119,14 +120,20 @@ class ReviewsAgent(OrchidAgent):
                 rag_data=rag_docs,
                 system_prompt=system_prompt,
             )
-            state["final_response"] = summary
-        except Exception as exc:
+            final_response = summary
+        except Exception as exc:  # noqa: BLE001
             logger.error("[reviews] LLM summarisation failed: %s", exc)
             # Fallback: return raw analysis
-            state["final_response"] = (
+            final_response = (
                 f"**Sentiment Analysis Result:**\n"
                 f"```json\n{json.dumps(sentiment_result, indent=2)}\n```\n\n"
                 f"Historical context: {len(rag_docs)} related reviews found."
             )
 
+        state["final_response"] = final_response
+        state["mcp_context"] = mcp_data
+        state["rag_context"] = rag_context
+        state["messages"] = state.get("messages", []) + [
+            AIMessage(content=f"[Reviews Agent]\n{final_response}", name="reviews"),
+        ]
         return state

@@ -7,6 +7,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+pytest.importorskip("asyncpg")
+
 from examples.fm_agent.bloom_jobs import (
     PLATFORM_REPOS,
     BloomContext,
