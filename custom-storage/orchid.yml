@@ -36,7 +36,7 @@ auth:
 # ignores migrations.
 storage:
   class: examples.custom-storage.storage.json_file.OrchidJSONChatStorage
-  dsn: /data/custom_storage_chats.json
+  dsn: ${CHAT_DB_DSN:-/data/custom_storage_chats.json}
 
 # ── Observability ────────────────────────────────────────────
 tracing:

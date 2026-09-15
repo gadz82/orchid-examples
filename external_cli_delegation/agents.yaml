@@ -21,7 +21,7 @@ defaults:
 external_agents:
   ask_assistant:
     command: ["python", "-c"]
-    args: ["claude -p"]
+    args: ["print('delegated response')"]
     timeout: 120
     description: "Delegate a sub-task to an external AI-assistant CLI."
     requires_approval: true

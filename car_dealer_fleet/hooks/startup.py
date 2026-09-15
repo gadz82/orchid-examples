@@ -116,11 +116,6 @@ async def build_expert_fleet(
     """
 
     # ── 1. Gather content sources ──────────────────────────────
-    content_sources: list[Any] = getattr(runtime, "content_sources", None) or []
-    if not content_sources:
-        logger.warning("[FleetBuilder] No content sources — skipping")
-        return
-
     # Prefer the config_storage DSN from agents.yaml so the hook writes
     # to the same file that merge_from_db() reads from.  Fall back to
     # the env var / hardcoded default only when config_storage is absent.
@@ -133,6 +128,22 @@ async def build_expert_fleet(
         config_storage_dsn
         or _resolve_setting(settings, "CHAT_DB_DSN", "~/.orchid/car-dealer-fleet.db")
     )
+
+    # ── Optional test/demo seed path ───────────────────────────
+    seed_path = os.environ.get("ORCHID_FLEET_SEED_PATH")
+    if seed_path:
+        logger.info("[FleetBuilder] Seeding fleet from %s", seed_path)
+        with open(seed_path) as f:
+            seed_configs = json.load(f)
+        await _clear_existing_agents(db_dsn)
+        await _persist_configs(db_dsn, seed_configs)
+        return
+
+    content_sources: list[Any] = getattr(runtime, "content_sources", None) or []
+    if not content_sources:
+        logger.warning("[FleetBuilder] No content sources — skipping")
+        return
+
     model = _resolve_setting(settings, "LITELLM_MODEL", "ollama/llama3.2")
 
     # ── 2. Delete existing agents (clean slate) ──────────────

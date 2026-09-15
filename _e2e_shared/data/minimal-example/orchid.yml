@@ -1,0 +1,8 @@
+llm:
+  model: "ollama/llama3.2"
+
+storage:
+  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+
+api:
+  dev_auth_bypass: true

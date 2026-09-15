@@ -41,7 +41,7 @@ content_sources:
 
 storage:
   class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
-  dsn: ~/.orchid/car-dealer-fleet.db
+  dsn: ${CHAT_DB_DSN:-~/.orchid/car-dealer-fleet.db}
 
 # Startup hook — builds the expert fleet from content sources
 startup:

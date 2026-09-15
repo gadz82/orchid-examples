@@ -259,7 +259,7 @@ events:
   store:
     class: orchid_ai.events.backends.sqlite.SQLiteEventStorage
     extra_args:
-      dsn: /data/education_events.db
+      dsn: ${ORCHID_EVENTS_DSN:-/data/education_events.db}
 
   queue:
     class: orchid_ai.events.queues.sqlite.SQLiteSignalQueue

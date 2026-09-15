@@ -75,9 +75,9 @@ agents:
       lookup_everywhere:
         description: "Fan out to every backend in parallel."
         steps:
-          - { tool: cache_lookup, source: mcp, server: knowledge_base }
-          - { tool: primary_lookup, source: mcp, server: knowledge_base }
-          - { tool: slow_lookup, source: mcp, server: knowledge_base }
+          - { tool: cache_lookup, source: knowledge_base }
+          - { tool: primary_lookup, source: knowledge_base }
+          - { tool: slow_lookup, source: knowledge_base }
 
   # ── 2. Strategy: sequential (chained context) ──────────────
   pipeline_lookup:
@@ -100,9 +100,9 @@ agents:
       pipeline:
         description: "Chained lookup — each tool sees the previous result."
         steps:
-          - { tool: cache_lookup, source: mcp, server: knowledge_base }
-          - { tool: primary_lookup, source: mcp, server: knowledge_base }
-          - { tool: slow_lookup, source: mcp, server: knowledge_base }
+          - { tool: cache_lookup, source: knowledge_base }
+          - { tool: primary_lookup, source: knowledge_base }
+          - { tool: slow_lookup, source: knowledge_base }
 
   # ── 3. Strategy: llm_decides (model picks tools) ───────────
   smart_lookup:
@@ -126,9 +126,9 @@ agents:
       smart_lookup_skill:
         description: "Let the LLM choose the right subset of backends."
         steps:
-          - { tool: cache_lookup, source: mcp, server: knowledge_base }
-          - { tool: primary_lookup, source: mcp, server: knowledge_base }
-          - { tool: slow_lookup, source: mcp, server: knowledge_base }
+          - { tool: cache_lookup, source: knowledge_base }
+          - { tool: primary_lookup, source: knowledge_base }
+          - { tool: slow_lookup, source: knowledge_base }
 
   # ── 4. Strategy: priority (CUSTOM — short-circuit chain) ──
   cascade_lookup:
@@ -152,9 +152,9 @@ agents:
       cascade:
         description: "Cache → primary → slow fallback chain."
         steps:
-          - { tool: cache_lookup, source: mcp, server: knowledge_base }
-          - { tool: primary_lookup, source: mcp, server: knowledge_base }
-          - { tool: slow_lookup, source: mcp, server: knowledge_base }
+          - { tool: cache_lookup, source: knowledge_base }
+          - { tool: primary_lookup, source: knowledge_base }
+          - { tool: slow_lookup, source: knowledge_base }
 
   # ── 5. Agentic-loop parallel dispatch (Phase A) ─────────────
   parallel_searcher:
