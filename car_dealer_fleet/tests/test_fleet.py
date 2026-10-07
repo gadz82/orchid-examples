@@ -232,7 +232,7 @@ def test_config_storage_accepts_custom_class_path():
 @pytest.mark.asyncio
 async def test_sqlite_config_storage_crud():
     """OrchidSQLiteConfigStorage supports full CRUD lifecycle."""
-    from orchid_ai.persistence.config_sqlite import OrchidSQLiteConfigStorage
+    from orchid_storage_sqlite.config_storage import OrchidSQLiteConfigStorage
 
     store = OrchidSQLiteConfigStorage(dsn=":memory:")
     await store.init_db()
@@ -264,7 +264,7 @@ async def test_sqlite_config_storage_crud():
 @pytest.mark.asyncio
 async def test_sqlite_config_storage_upsert_overwrites():
     """upsert_config overwrites existing entries."""
-    from orchid_ai.persistence.config_sqlite import OrchidSQLiteConfigStorage
+    from orchid_storage_sqlite.config_storage import OrchidSQLiteConfigStorage
 
     store = OrchidSQLiteConfigStorage(dsn=":memory:")
     await store.init_db()

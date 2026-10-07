@@ -18,7 +18,7 @@ rag:
   embedding_model: gemini/gemini-embedding-001
 
 storage:
-  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  class: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage
   dsn: ~/.orchid/embedded_python_chats.db
 
 checkpointer:

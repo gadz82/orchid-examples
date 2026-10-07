@@ -38,7 +38,7 @@ upload:
 
 # ── Chat persistence ──────────────────────────────────────────
 storage:
-  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  class: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage
   dsn: ~/.orchid/recipes.db
 
 # ── Startup hook seeds the recipe corpus ──────────────────────

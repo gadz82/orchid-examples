@@ -135,7 +135,7 @@ ABC for chat session and message CRUD. Defines:
 - **`add_message(chat_id, role, content, agents_used, metadata)`** — Add a message.
 - **`get_messages(chat_id, limit, offset)`** — Retrieve messages.
 
-The library ships built-in SQLite and PostgreSQL implementations. Alternative backends live in consumer projects.
+The library ships a built-in in-memory implementation; durable SQLite and PostgreSQL backends live in the `orchid-storage-sqlite` / `orchid-storage-postgres` plugins, and alternative backends live in consumer projects.
 
 ## LLM Abstraction
 

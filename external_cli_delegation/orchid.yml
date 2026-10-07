@@ -26,4 +26,4 @@ rag:
   vector_backend: chroma
 
 storage:
-  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  class: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage

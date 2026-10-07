@@ -38,7 +38,7 @@ async def _embedded_api_client() -> AsyncIterator[TestClient]:
         "CHECKPOINTER_TYPE": "sqlite",
         "CHECKPOINTER_DSN": str(tmp_root / "checkpoints.db"),
         "VECTOR_BACKEND": "null",
-        "CHAT_STORAGE_CLASS": "orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage",
+        "CHAT_STORAGE_CLASS": "orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage",
         "LANGSMITH_TRACING": "false",
         "ORCHID_ENABLE_PERF_LOGS": "false",
         "RATE_LIMIT_MESSAGES_PER_MINUTE": "0",

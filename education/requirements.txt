@@ -3,6 +3,8 @@
 # multipart endpoints; ``[events]`` enables the APScheduler-backed
 # triggers declared in ``agents.yaml`` (events: enabled: true).
 orchid-ai[documents,events]>=1.8.4
+# SQLite storage backend (default for this example)
+orchid-storage-sqlite>=1.0.0
 # Example-specific tools for multi-format export (lesson-builder agent).
 reportlab>=4.0
 python-pptx>=1.0

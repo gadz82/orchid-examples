@@ -1,6 +1,8 @@
 # orchid.yml — Basketball demo configuration
 #
-# Self-contained demo: basketball + psychologist agents with SQLite storage.
+# Self-contained demo: basketball + psychologist agents with PostgreSQL
+# chat storage (via orchid-storage-postgres) and SQLite-backed events
+# (via orchid-storage-sqlite).
 # No Docebo account, MCP servers, or external APIs required.
 #
 # Usage:

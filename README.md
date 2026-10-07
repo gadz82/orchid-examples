@@ -24,6 +24,12 @@ docker compose up --build
 
 ## Examples
 
+**Storage backends.** Examples with SQLite storage declare the
+`orchid-storage-sqlite` plugin in their `requirements.txt`; PostgreSQL
+examples use `orchid-storage-postgres`. The `orchid-ai` framework itself
+defaults to in-memory storage when no backend is configured, while
+`orchid-api` / `orchid-cli` ship SQLite by default.
+
 ### 🐳 Docker-ready (full stack)
 
 | Example | What it shows | Storage | Services |

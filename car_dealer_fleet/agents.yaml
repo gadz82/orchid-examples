@@ -33,7 +33,7 @@ defaults:
 
 config_storage:
   enabled: true
-  class: orchid_ai.persistence.config_sqlite.OrchidSQLiteConfigStorage
+  class: orchid_storage_sqlite.config_storage.OrchidSQLiteConfigStorage
   dsn: ${CHAT_DB_DSN:-~/.orchid/car-dealer-fleet.db}
 
 agents: {}

@@ -1,2 +1,4 @@
 # Pin the framework.
 orchid-ai[documents,events]>=1.8.4
+# SQLite storage backend (default for this example)
+orchid-storage-sqlite>=1.0.0

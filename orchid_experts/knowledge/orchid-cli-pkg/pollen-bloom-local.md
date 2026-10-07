@@ -75,9 +75,9 @@ Local mode respects the `events` section of `agents.yaml`:
 events:
   enabled: true
   store:
-    class: orchid_ai.events.backends.sqlite.SQLiteEventStorage
+    class: orchid_storage_sqlite.event_storage.SQLiteEventStorage
   queue:
-    class: orchid_ai.events.queues.sqlite.SQLiteSignalQueue
+    class: orchid_storage_sqlite.event_queue.SQLiteSignalQueue
     poll_interval_ms: 200
     max_attempts: 5
   scheduler:
@@ -125,9 +125,9 @@ Signals and jobs are lost when the process exits. Suitable for `run-once` and te
 ```yaml
 events:
   store:
-    class: orchid_ai.events.backends.sqlite.SQLiteEventStorage
+    class: orchid_storage_sqlite.event_storage.SQLiteEventStorage
   queue:
-    class: orchid_ai.events.queues.sqlite.SQLiteSignalQueue
+    class: orchid_storage_sqlite.event_queue.SQLiteSignalQueue
 ```
 
 Signals and job runs survive process restarts. Suitable for `pollen-bloom start` and local development.

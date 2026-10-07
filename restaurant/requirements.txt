@@ -3,4 +3,6 @@
 # multipart endpoints; ``[events]`` enables the APScheduler-backed
 # triggers declared in ``config/agents.yaml`` (events: enabled: true).
 orchid-ai[documents,events]>=1.8.4
+# SQLite storage backend (default for this example)
+orchid-storage-sqlite>=1.0.0
 orchid-rag-qdrant>=0.1.0
