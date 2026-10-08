@@ -17,7 +17,7 @@ auth:
 # in the same database as chat history (shared migration system).
 # Default uses SQLite; switch to PostgreSQL for production.
 mcp_auth:
-  token_store_class: orchid_ai.persistence.mcp_token_sqlite.OrchidSQLiteMCPTokenStore
+  token_store_class: orchid_storage_sqlite.mcp_token_store.OrchidSQLiteMCPTokenStore
   token_store_dsn: ~/.orchid/chats.db  # same DB as chat storage
 
 # ── API base URL (for constructing OAuth callback URLs) ──────

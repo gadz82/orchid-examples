@@ -2,7 +2,7 @@
 
 # Persistence
 
-Orchid provides pluggable chat persistence through the `OrchidChatStorage` abstract base class. The library ships with built-in SQLite and PostgreSQL implementations. Consumer projects can implement alternative backends by subclassing the ABC.
+Orchid provides pluggable chat persistence through the `OrchidChatStorage` abstract base class. The library ships a dependency-free in-memory implementation; durable SQLite and PostgreSQL backends are provided by the `orchid-storage-sqlite` and `orchid-storage-postgres` plugin packages. Consumer projects can implement alternative backends by subclassing the ABC.
 
 ## OrchidChatStorage ABC
 
@@ -61,7 +61,7 @@ The abstract interface for chat session and message CRUD. All persistence backen
 
 ```yaml
 storage:
-  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  class: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage
   dsn: /data/chats.db
 ```
 

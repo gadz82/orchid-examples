@@ -21,7 +21,7 @@ The Pollen+Bloom system uses a two-level retry architecture: queue-level retry f
 events:
   queue:
     # class: orchid_storage_postgres.queue.PostgresSignalQueue  # install orchid-storage-postgres plugin
-    class: orchid_ai.events.queues.sqlite.SQLiteSignalQueue
+    class: orchid_storage_sqlite.event_queue.SQLiteSignalQueue
     notify_enabled: true
     poll_interval_ms: 200
     lease_seconds: 30

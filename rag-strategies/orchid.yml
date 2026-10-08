@@ -46,7 +46,7 @@ upload:
 
 # ── Chat persistence ─────────────────────────────────────────
 storage:
-  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  class: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage
   dsn: /data/rag_strategies_chats.db
 
 # ── Startup hook seeds release notes + registers recency_simple ──

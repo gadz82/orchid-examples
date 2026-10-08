@@ -138,7 +138,7 @@ llm:
 rag:
   vector_backend: chromadb          # Zero-infra
 storage:
-  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  class: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage
   dsn: /data/chats.db
 auth:
   dev_bypass: true                  # No auth needed

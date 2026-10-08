@@ -1,2 +1,4 @@
 # Framework deps for orchid-api runtime (events enabled for APScheduler triggers)
-orchid-ai[documents,events]>=1.8.4
+orchid-ai[documents,events]>=1.11.0
+# SQLite storage backend (default for this example)
+orchid-storage-sqlite>=1.0.0

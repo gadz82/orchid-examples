@@ -146,7 +146,7 @@ async def build_orchid_test_app(
         "CHECKPOINTER_DSN": str(tmp_root / "checkpoints.db"),
         "ORCHID_EXPORT_DIR": str(tmp_root / "exports"),
         "VECTOR_BACKEND": "null",
-        "CHAT_STORAGE_CLASS": "orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage",
+        "CHAT_STORAGE_CLASS": "orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage",
         "LANGSMITH_TRACING": "false",
         "ORCHID_ENABLE_PERF_LOGS": "false",
         "RATE_LIMIT_MESSAGES_PER_MINUTE": "0",

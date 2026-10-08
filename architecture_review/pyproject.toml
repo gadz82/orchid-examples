@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 
 dependencies = [
     "orchid-api>=1.8.2",
-    "orchid-ai[documents]>=1.8.6",
+    "orchid-ai[documents]>=1.11.0",
     "orchid-rag-qdrant>=1.0.0",
 ]
 

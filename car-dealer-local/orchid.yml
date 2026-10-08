@@ -29,7 +29,7 @@ content_sources:
       dealership: acme-auto
 
 storage:
-  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  class: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage
   dsn: ~/.orchid/car-dealer.db
 
 tracing:

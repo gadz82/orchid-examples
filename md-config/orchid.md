@@ -39,7 +39,7 @@ upload:
   chunk_overlap: 200
 
 storage:
-  class: orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage
+  class: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage
   dsn: /data/chats.db
 
 tracing:
@@ -122,11 +122,11 @@ skills:
 events:
   enabled: true
   store:
-    class: orchid_ai.events.backends.sqlite.SQLiteEventStorage
+    class: orchid_storage_sqlite.event_storage.SQLiteEventStorage
     extra_args:
       dsn: /data/chats.db
   queue:
-    class: orchid_ai.events.queues.sqlite.SQLiteSignalQueue
+    class: orchid_storage_sqlite.event_queue.SQLiteSignalQueue
     poll_interval_ms: 200
     lease_seconds: 30
     max_attempts: 3

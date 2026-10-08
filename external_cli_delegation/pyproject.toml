@@ -5,7 +5,7 @@ description = "External AI-agent CLI delegation example for the Orchid framework
 requires-python = ">=3.11"
 
 dependencies = [
-    "orchid-ai>=1.8.6",
+    "orchid-ai>=1.11.0",
 ]
 
 [project.optional-dependencies]

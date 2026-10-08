@@ -1,1 +1,4 @@
 orchid-rag-qdrant>=1.0.0
+
+# SQLite storage backend (default for this example)
+orchid-storage-sqlite>=1.0.0

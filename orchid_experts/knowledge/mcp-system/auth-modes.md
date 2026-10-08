@@ -105,4 +105,4 @@ Does the MCP server require authentication?
 | `OrchidMCPTokenStore` | Per-user outbound OAuth token persistence. |
 | `OrchidMCPClientRegistrationStore` | Per-server discovered endpoints + DCR credentials. |
 
-Both are ABCs in `core/mcp.py` with built-in SQLite and PostgreSQL implementations.
+Both are ABCs in `core/mcp.py`; durable SQLite and PostgreSQL implementations live in the `orchid-storage-sqlite` / `orchid-storage-postgres` plugins.

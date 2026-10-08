@@ -85,7 +85,7 @@ Common variants and how to implement them:
 
 For SQL-backed implementations, study
 `orchid_storage_postgres.OrchidPostgresChatStorage` and
-`orchid_ai.persistence.sqlite.OrchidSQLiteChatStorage` for the
+`orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage` for the
 canonical migration pattern via `OrchidMigrationRunner`.
 
 ## Contract checklist

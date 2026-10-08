@@ -40,9 +40,9 @@ from orchid_ai.core.events.job import JobStatus
 from orchid_ai.core.events.signal import SignalEnvelope
 from orchid_ai.core.events.store import OrchidScheduleRecord
 from orchid_ai.core.state import OrchidAuthContext
-from orchid_ai.events.backends.sqlite import SQLiteEventStorage
+from orchid_storage_sqlite.event_storage import SQLiteEventStorage
 from orchid_ai.events.processors.asyncio_pool import AsyncioWorkerPoolProcessor
-from orchid_ai.events.queues.sqlite import SQLiteSignalQueue
+from orchid_storage_sqlite.event_queue import SQLiteSignalQueue
 from orchid_ai.events.registry import build_registry_from_config
 from orchid_ai.events.runners.graph_runner import GraphJobRunner
 from orchid_ai.events.visibility import run_is_visible

@@ -6,7 +6,7 @@ A three-agent helpdesk system demonstrating **Pollen + Bloom** event-driven acti
 
 - **Pollen + Bloom fan-out** — Incoming signals trigger multi-step Bloom runs that execute agent pipelines in the background
 - **Event-driven agent activation** — Agents run as Bloom triggers, not just in response to chat messages
-- **SQLite event storage** — Persistent signal/queue/store using built-in SQLite (PostgreSQL plugin available via `orchid-storage-postgres`)
+- **SQLite event storage** — Persistent signal/queue/store via `orchid-storage-sqlite` (PostgreSQL available via `orchid-storage-postgres`)
 - **Three-agent routing pipeline** — Tickets automatically flow through triage, support, and escalation based on priority
 - **Custom event producers** — HTTP webhook ingestion for external ticketing systems
 - **Identity minting** — Service-account Bloom runs that act on behalf of users via `OrchidIdentityResolver.mint_for_user()`

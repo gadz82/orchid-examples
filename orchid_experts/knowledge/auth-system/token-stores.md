@@ -2,7 +2,7 @@
 
 # Token Stores
 
-Orchid uses multiple token store ABCs for different OAuth token types. Each store has built-in SQLite and PostgreSQL implementations.
+Orchid uses multiple token store ABCs for different OAuth token types. Durable SQLite and PostgreSQL implementations live in the `orchid-storage-sqlite` / `orchid-storage-postgres` plugins; the framework default is in-memory.
 
 ## Token Store Types
 
