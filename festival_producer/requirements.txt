@@ -1,5 +1,5 @@
 # Framework deps for orchid-api runtime
-orchid-ai[documents]>=1.8.4
+orchid-ai[documents]>=1.11.0
 # SQLite storage backend (default for this example)
 orchid-storage-sqlite>=1.0.0
 orchid-rag-qdrant>=1.0.0
