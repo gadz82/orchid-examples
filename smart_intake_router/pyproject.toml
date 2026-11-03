@@ -1,0 +1,10 @@
+[project]
+name = "orchid-example-smart-intake-router"
+version = "0.1.0"
+description = "Smart intake router example for the Orchid decision-model layer"
+requires-python = ">=3.11"
+dependencies = ["orchid-ai"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

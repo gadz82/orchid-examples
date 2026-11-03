@@ -1,0 +1,106 @@
+version: "1"
+
+defaults:
+  llm:
+    model: "ollama/llama3.2"
+    temperature: 0.2
+  rag:
+    enabled: false
+
+supervisor:
+  assistant_name: "Northwind Cloud"
+  routing_system_prompt: |
+    You are the Northwind Cloud intake router.
+    Route billing questions to the billing agent, outages to technical,
+    sign-in problems to account, and everything else to general.
+
+# ── Decision layer ──────────────────────────────────────────
+# The default profile is the deterministic stub: no key, no network.
+# Replace this block with a `state-questions` or `openai-compatible`
+# provider to use a real decision model (see README).
+decision_models:
+  router:
+    protocol: stub
+    stub:
+      confidence: 0.9
+      mode: answer
+      answers:
+        "I was charged twice for the same invoice:agent:billing": {probability: 0.97}
+        "I was charged twice for the same invoice:agent:technical": {probability: 0.05}
+        "I was charged twice for the same invoice:agent:account": {probability: 0.05}
+        "I was charged twice for the same invoice:agent:general": {probability: 0.1}
+        "I was charged twice for the same invoice:execution": {choice: parallel}
+        "I was charged twice for the same invoice:skill": {choice: __none__}
+        "I was charged twice for the same invoice:tool:lookup_invoice": {probability: 0.95}
+        "I was charged twice for the same invoice:tool:send_email": {probability: 0.05}
+
+        "Please refund the duplicate charge:agent:billing": {probability: 0.9}
+        "Please refund the duplicate charge:agent:technical": {probability: 0.05}
+        "Please refund the duplicate charge:agent:account": {probability: 0.05}
+        "Please refund the duplicate charge:agent:general": {probability: 0.1}
+        "Please refund the duplicate charge:execution": {choice: parallel}
+        "Please refund the duplicate charge:skill": {choice: refund_request}
+
+        "The dashboard is down for everyone:agent:billing": {probability: 0.05}
+        "The dashboard is down for everyone:agent:technical": {probability: 0.97}
+        "The dashboard is down for everyone:agent:account": {probability: 0.05}
+        "The dashboard is down for everyone:agent:general": {probability: 0.1}
+        "The dashboard is down for everyone:execution": {choice: parallel}
+        "The dashboard is down for everyone:skill": {choice: __none__}
+
+decisions:
+  routing:
+    model: router
+    confidence_threshold: 0.8
+  skills:
+    model: router
+    confidence_threshold: 0.8
+  tools:
+    model: router
+    confidence_threshold: 0.8
+    max_candidates: 8
+  rag:
+    model: router
+    confidence_threshold: 0.8
+
+# ── Built-in tools (the tool decision shortlists these) ─────
+tools:
+  lookup_invoice:
+    handler: examples.smart_intake_router.tools.accounts.lookup_invoice
+    description: "Look up an invoice and its charge history by customer or invoice id."
+
+# ── Orchestrator skill ──────────────────────────────────────
+skills:
+  refund_request:
+    description: "Handle a duplicate-charge refund request end to end."
+    steps:
+      - agent: billing
+        instruction: "Look up the invoice, confirm the duplicate charge, and explain the refund path."
+
+# ── Agents ──────────────────────────────────────────────────
+agents:
+  billing:
+    description: "Handles invoices, duplicate charges, and refunds."
+    prompt: |
+      You are the Northwind Cloud billing specialist. Use the invoice lookup tool
+      when an order or invoice id is available, then explain the charge and the
+      refund path plainly.
+    tools: [lookup_invoice]
+
+  technical:
+    description: "Handles outages, errors, and dashboard problems."
+    prompt: |
+      You are the Northwind Cloud technical support engineer. Diagnose the
+      symptom, name the likely cause, and give the next concrete step.
+
+  account:
+    description: "Handles sign-in, password, and account-access problems."
+    prompt: |
+      You are the Northwind Cloud account specialist. Help with sign-in,
+      password resets, and account access.
+
+  general:
+    description: "Handles anything that does not fit the specialist teams."
+    prompt: |
+      You are the Northwind Cloud general assistant. Answer briefly and route
+      the user to the right team when a specialist is needed.
