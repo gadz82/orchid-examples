@@ -46,6 +46,16 @@ From the workspace root: `make demo-smart_intake_router` (runs
 `workspace-py/script/start_smart_intake_router.sh`) or `make run-smart_intake_router`
 (direct compose; both are auto-discovered).
 
+This runner uses the example's own compose (SQLite + Ollama) rather than the shared
+`script/run_example.sh` compose, which assumes PostgreSQL and Gemini. The divergence is
+intentional (ADR-001).
+
+To inspect the exact command without starting Docker:
+
+```bash
+bash workspace-py/script/start_smart_intake_router.sh --dry-run
+```
+
 ## Use Jev (or another decision model) for routing
 
 The example ships with the stub so it runs offline. To let a real decision model choose the
@@ -108,7 +118,7 @@ supervisor's LLM routing on any failure.
 
 ```bash
 cd workspace-py
-.venv/bin/python -m pytest examples/smart_intake_router/tests -x --no-cov
+make test-e2e-examples FLAGS='-k smart_intake'
 ```
 
 The tests exercise the real config, the real stub provider, routing, skill selection, the tool
