@@ -42,8 +42,9 @@ synthesis; set `LLM_MODEL` to a hosted provider (and its key) in `.env` for fast
 GPU. The deterministic chat coverage lives in `tests/test_api_e2e.py`, which injects a
 `FakeChatModel` and does not need Ollama.
 
-From the workspace root: `make run-smart_intake_router` (the example's compose file is
-auto-discovered).
+From the workspace root: `make demo-smart_intake_router` (runs
+`workspace-py/script/start_smart_intake_router.sh`) or `make run-smart_intake_router`
+(direct compose; both are auto-discovered).
 
 ## Use Jev (or another decision model) for routing
 
