@@ -48,7 +48,7 @@ decisions:
   routing:
     model: jev
     confidence_threshold: 0.8
-    on_low_confidence: llm             # llm (default) or escalate
+    on_low_confidence: llm             # llm (default), default, or escalate
   # Keep the other points on the stub while you validate routing:
   skills:
     model: router
@@ -69,7 +69,7 @@ On every turn Jev is asked:
 The supervisor selects every agent whose boolean clears `confidence_threshold` and dispatches.
 Synthesis still uses the chat model — the decision model only routes. Low confidence, a
 missing/refused answer, a timeout, or a provider error falls back to the existing LLM supervisor
-(or an escalation message when `on_low_confidence: escalate`). `sequential` with more than one
+(with `escalate`, or a deterministic rephrase request with `default`). `sequential` with more than one
 selected agent also falls back to the LLM, because independent booleans cannot express dependency
 order.
 
