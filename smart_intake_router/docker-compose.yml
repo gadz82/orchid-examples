@@ -4,7 +4,7 @@ services:
       context: ../..
       dockerfile: examples/smart_intake_router/Dockerfile
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       ORCHID_CONFIG: examples/smart_intake_router/config/orchid.yml
       VECTOR_BACKEND: "null"
@@ -26,7 +26,7 @@ services:
   ollama:
     image: ollama/ollama:latest
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
       - ollama_data:/root/.ollama
 
