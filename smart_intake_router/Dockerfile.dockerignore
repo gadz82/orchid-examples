@@ -1,0 +1,16 @@
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.git
+**/node_modules
+**/dist
+**/build
+examples/*
+!examples/smart_intake_router
+!examples/_e2e_shared
+orchid-infrastructure
+fm_agent
+script

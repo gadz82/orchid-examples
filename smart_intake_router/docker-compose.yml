@@ -1,0 +1,46 @@
+services:
+  agents-api:
+    build:
+      context: ../..
+      dockerfile: examples/smart_intake_router/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ORCHID_CONFIG: examples/smart_intake_router/config/orchid.yml
+      VECTOR_BACKEND: "null"
+      CHAT_STORAGE_CLASS: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage
+      CHAT_DB_DSN: /data/chats.db
+      CHECKPOINTER_TYPE: sqlite
+      CHECKPOINTER_DSN: /data/checkpoints.db
+      DEV_AUTH_BYPASS: "true"
+      LLM_MODEL: ${LLM_MODEL:-ollama/llama3.2}
+      LITELLM_MODEL: ${LLM_MODEL:-ollama/llama3.2}
+      OLLAMA_API_BASE: http://ollama:11434
+      LANGSMITH_TRACING: "false"
+      ORCHID_ENABLE_PERF_LOGS: "false"
+    volumes:
+      - smart_intake_data:/data
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  ollama-pull:
+    image: ollama/ollama:latest
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint:
+      - /bin/sh
+      - -c
+      - sleep 3 && ollama pull ${OLLAMA_MODEL:-llama3.2}
+
+volumes:
+  smart_intake_data:
+  ollama_data:

@@ -2,7 +2,7 @@ version: "1"
 
 defaults:
   llm:
-    model: "ollama/llama3.2"
+    model: "${LLM_MODEL:-ollama/llama3.2}"
     temperature: 0.2
   rag:
     enabled: false
@@ -82,10 +82,11 @@ agents:
   billing:
     description: "Handles invoices, duplicate charges, and refunds."
     prompt: |
-      You are the Northwind Cloud billing specialist. Use the invoice lookup tool
-      when an order or invoice id is available, then explain the charge and the
-      refund path plainly.
+      You are the Northwind Cloud billing specialist. Use lookup_invoice at most
+      once. If no invoice id is available, ask for it instead of guessing. After
+      one lookup, answer with the charge status and the refund path plainly.
     tools: [lookup_invoice]
+    max_tool_rounds: 3
 
   technical:
     description: "Handles outages, errors, and dashboard problems."

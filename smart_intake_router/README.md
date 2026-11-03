@@ -27,6 +27,24 @@ Sample messages and the decisions they produce:
 - `Please refund the duplicate charge` → the `refund_request` orchestrator skill
 - `The dashboard is down for everyone` → technical
 
+## Run the full stack (Docker)
+
+```bash
+cd workspace-py/examples/smart_intake_router
+cp .env.example .env
+docker compose up --build
+# API: http://localhost:8080/health
+```
+
+The compose stack starts the API, an Ollama service, and pulls the `LLM_MODEL` model. The
+decisions use the stub and need no key. On CPU-only Docker, Ollama is slow for interactive
+synthesis; set `LLM_MODEL` to a hosted provider (and its key) in `.env` for fast replies, or use a
+GPU. The deterministic chat coverage lives in `tests/test_api_e2e.py`, which injects a
+`FakeChatModel` and does not need Ollama.
+
+From the workspace root: `make run-smart_intake_router` (the example's compose file is
+auto-discovered).
+
 ## Use Jev (or another decision model) for routing
 
 The example ships with the stub so it runs offline. To let a real decision model choose the
