@@ -20,6 +20,7 @@ from orchid_ai.core.identity import OrchidIdentityResolver
 from orchid_ai.core.state import OrchidAuthContext
 
 
+# ORCHID-MEM: 01a1a0c1-dd5c-74f6-a2bf-22135fba20b5 — demo identity resolver for Bloom
 class BasketballIdentityResolver(OrchidIdentityResolver):
     """Trivial resolver — the demo runs single-tenant + single-user."""
 
