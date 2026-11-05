@@ -78,6 +78,8 @@ decisions:
     model: jev
     confidence_threshold: 0.8
     on_low_confidence: llm             # llm (default), default, or escalate
+    history_max_turns: 10              # default; max conversation turns sent to Jev
+    history_max_chars: 400             # per-message truncation
   # Keep the other points on the stub while you validate routing:
   skills:
     model: router
@@ -109,6 +111,27 @@ Through a gateway, keep `protocol: state-questions` and point `base_url`/`decide
 gateway endpoint (for example `/v1/evaluate`). For the OpenAI Decisions shape use
 `protocol: openai-compatible` with `decide_path: /v1/decisions`. For a plain chat model use
 `protocol: llm` with the model string; it is the slowest option but requires no decision provider.
+
+### RAG flavours
+
+The RAG gate runs after the selected retrieval strategy returns, so it applies to `simple`,
+`hybrid`, `hyde`, `multi_query`, and `graph_rag`. For `graph_rag`, the strategy first selects graph
+nodes with the decision model and then serialises the surviving sub-graph; the final passages still
+pass through the chunk gate.
+
+Use `decisions.rag.strategies` to restrict the gate (omit it to apply to every strategy):
+
+```yaml
+decisions:
+  rag:
+    model: jev
+    confidence_threshold: 0.8
+    strategies: [simple, hybrid, graph_rag]
+```
+
+The decision state includes each passage's text, score, and source, so the provider can weigh
+provenance as well as content. HyDE and multi-query still generate their variants; the gate filters
+what reaches synthesis, not how the variants are produced.
 
 `state-questions` covers the state-and-questions dialect; `openai-compatible` covers the
 OpenAI Decisions shape. The transport validates egress, bounds the call, and falls back to the
