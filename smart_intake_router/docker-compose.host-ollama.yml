@@ -1,0 +1,33 @@
+# Runs the example against the Ollama daemon installed on the host.
+# The host must already have the model: `ollama pull gemma4:26b`.
+# Docker Desktop exposes the host as host.docker.internal; extra_hosts covers Linux.
+services:
+  agents-api:
+    build:
+      context: ../..
+      dockerfile: examples/smart_intake_router/Dockerfile
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      ORCHID_CONFIG: examples/smart_intake_router/config/orchid.yml
+      VECTOR_BACKEND: "null"
+      CHAT_STORAGE_CLASS: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage
+      CHAT_DB_DSN: /data/chats.db
+      CHECKPOINTER_TYPE: sqlite
+      CHECKPOINTER_DSN: /data/checkpoints.db
+      DEV_AUTH_BYPASS: "true"
+      LLM_MODEL: ${LLM_MODEL:-ollama/gemma4:26b}
+      LITELLM_MODEL: ${LLM_MODEL:-ollama/gemma4:26b}
+      OLLAMA_API_BASE: http://host.docker.internal:11434
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      TYPESAFE_BASE_URL: ${TYPESAFE_BASE_URL:-https://api.typesafe.ai}
+      DECISION_ROUTING_MODEL: ${DECISION_ROUTING_MODEL:-router}
+      LANGSMITH_TRACING: "false"
+      ORCHID_ENABLE_PERF_LOGS: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - smart_intake_data:/data
+
+volumes:
+  smart_intake_data:

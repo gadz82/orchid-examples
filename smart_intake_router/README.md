@@ -46,6 +46,28 @@ From the workspace root: `make demo-smart_intake_router` (runs
 `workspace-py/script/start_smart_intake_router.sh`) or `make run-smart_intake_router`
 (direct compose; both are auto-discovered).
 
+### Use the Ollama installed on the host
+
+If Ollama already runs on the host with `gemma4:26b`, skip the bundled Ollama
+container:
+
+```bash
+# from the repository root
+bash workspace-py/script/start_smart_intake_router.sh --host-ollama --clean-volumes --detach
+
+# or directly:
+docker compose -f workspace-py/examples/smart_intake_router/docker-compose.host-ollama.yml up --build --detach
+```
+
+The API reaches the host at `host.docker.internal:11434`; the `ollama` and
+`ollama-pull` services are not started, so nothing is downloaded into Docker.
+`--clean-volumes` removes only the example's `smart_intake_data` volume in this
+mode. Pull the model on the host first:
+
+```bash
+ollama pull gemma4:26b
+```
+
 This runner uses the example's own compose (SQLite + Ollama) rather than the shared
 `script/run_example.sh` compose, which assumes PostgreSQL and Gemini. The divergence is
 intentional (ADR-001).
