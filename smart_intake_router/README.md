@@ -34,11 +34,13 @@ cd workspace-py/examples/smart_intake_router
 cp .env.example .env
 docker compose up --build
 # API: http://localhost:8080/health
+# UI:  http://localhost:3000
 ```
 
-The compose stack starts the API and uses the Ollama daemon installed on the host at
-`host.docker.internal:11434`; no model is downloaded into a container. Pull the model on the
-host first:
+The compose stack starts the API and the frontend (the shared `orchid-frontend` image,
+cloned from GitHub; the first build can take a few minutes), and uses the Ollama daemon
+installed on the host at `host.docker.internal:11434`; no model is downloaded into a
+container. Pull the model on the host first:
 
 ```bash
 ollama pull gemma4:26b
