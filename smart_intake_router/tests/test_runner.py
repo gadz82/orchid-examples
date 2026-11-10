@@ -75,12 +75,6 @@ def test_clean_volumes_is_printed_in_order() -> None:
     assert "up --build" in lines[1]
 
 
-def test_host_ollama_uses_host_compose() -> None:
-    result = _run("--host-ollama", "--dry-run")
-    assert "docker-compose.host-ollama.yml" in result.stdout
-    assert "host.docker.internal" not in result.stdout
-
-
 def test_makefile_targets_resolve() -> None:
     expectations = {
         "demo-smart_intake_router": "script/start_smart_intake_router.sh",

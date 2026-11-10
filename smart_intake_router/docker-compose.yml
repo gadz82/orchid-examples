@@ -1,3 +1,5 @@
+# Runs the example against the Ollama daemon installed on the host.
+# Pull the model on the host first: ollama pull gemma4:26b
 services:
   agents-api:
     build:
@@ -13,37 +15,18 @@ services:
       CHECKPOINTER_TYPE: sqlite
       CHECKPOINTER_DSN: /data/checkpoints.db
       DEV_AUTH_BYPASS: "true"
-      LLM_MODEL: ${LLM_MODEL:-ollama/llama3.2}
-      LITELLM_MODEL: ${LLM_MODEL:-ollama/llama3.2}
-      OLLAMA_API_BASE: http://ollama:11434
+      LLM_MODEL: ${LLM_MODEL:-ollama/gemma4:26b}
+      LITELLM_MODEL: ${LLM_MODEL:-ollama/gemma4:26b}
+      OLLAMA_API_BASE: http://host.docker.internal:11434
       TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
       TYPESAFE_BASE_URL: ${TYPESAFE_BASE_URL:-https://api.typesafe.ai}
       DECISION_ROUTING_MODEL: ${DECISION_ROUTING_MODEL:-router}
       LANGSMITH_TRACING: "false"
       ORCHID_ENABLE_PERF_LOGS: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - smart_intake_data:/data
-    depends_on:
-      - ollama
-
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "127.0.0.1:11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-
-  ollama-pull:
-    image: ollama/ollama:latest
-    depends_on:
-      - ollama
-    environment:
-      OLLAMA_HOST: http://ollama:11434
-    entrypoint:
-      - /bin/sh
-      - -c
-      - sleep 3 && ollama pull ${OLLAMA_MODEL:-llama3.2}
 
 volumes:
   smart_intake_data:
-  ollama_data:
