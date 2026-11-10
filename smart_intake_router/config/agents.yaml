@@ -14,10 +14,15 @@ supervisor:
     Route billing questions to the billing agent, outages to technical,
     sign-in problems to account, and everything else to general.
 
+# Egress allowlist for the decision HTTP transport. The host must match the
+# hostname in `decision_models.jev.base_url` (no scheme, no port).
+allowed_decision_hosts:
+  - api.typesafe.ai
+
 # ── Decision layer ──────────────────────────────────────────
 # The default profile is the deterministic stub: no key, no network.
-# Replace this block with a `state-questions` or `openai-compatible`
-# provider to use a real decision model (see README).
+# To route with TypeSafe/Jev, set DECISION_ROUTING_MODEL=jev and
+# TYPESAFE_API_KEY; the jev provider stays unreferenced otherwise.
 decision_models:
   router:
     protocol: stub
@@ -48,10 +53,21 @@ decision_models:
         "The dashboard is down for everyone:execution": {choice: parallel}
         "The dashboard is down for everyone:skill": {choice: __none__}
 
+  jev:
+    protocol: state-questions          # TypeSafe System One dialect; `systemone` is an alias
+    model: jev-latest
+    base_url: "${TYPESAFE_BASE_URL:-https://api.typesafe.ai}"
+    decide_path: /v1/systemone
+    api_key_env: TYPESAFE_API_KEY
+    timeout_seconds: 2.0
+
 decisions:
   routing:
-    model: router
+    model: "${DECISION_ROUTING_MODEL:-router}"
     confidence_threshold: 0.8
+    on_low_confidence: llm
+    history_max_turns: 10
+    history_max_chars: 400
   skills:
     model: router
     confidence_threshold: 0.8

@@ -56,26 +56,33 @@ To inspect the exact command without starting Docker:
 bash workspace-py/script/start_smart_intake_router.sh --dry-run
 ```
 
-## Use Jev (or another decision model) for routing
+## Use TypeSafe/Jev for routing
 
-The example ships with the stub so it runs offline. To let a real decision model choose the
-agent, replace the `router` provider and point `decisions.routing` at it:
+The example ships with the stub so it runs offline. The `jev` provider is declared in
+`config/agents.yaml` but is inactive by default. Enable it with two environment variables:
+
+```bash
+export TYPESAFE_API_KEY=...        # from your TypeSafe account
+export DECISION_ROUTING_MODEL=jev
+```
+
+The provider block is:
 
 ```yaml
-allowed_decision_hosts: [api.example.com]
+allowed_decision_hosts: [api.typesafe.ai]
 
 decision_models:
   jev:
     protocol: state-questions          # TypeSafe's System One dialect; `systemone` is an alias
     model: jev-latest
-    base_url: https://api.example.com
-    decide_path: /v1/systemone         # provider-specific path; defaults to /v1/decide
-    api_key_env: DECISION_API_KEY
+    base_url: "${TYPESAFE_BASE_URL:-https://api.typesafe.ai}"
+    decide_path: /v1/systemone
+    api_key_env: TYPESAFE_API_KEY
     timeout_seconds: 2.0
 
 decisions:
   routing:
-    model: jev
+    model: "${DECISION_ROUTING_MODEL:-router}"
     confidence_threshold: 0.8
     on_low_confidence: llm             # llm (default), default, or escalate
     history_max_turns: 10              # default; max conversation turns sent to Jev
@@ -88,6 +95,10 @@ decisions:
   rag:
     model: router
 ```
+
+`TYPESAFE_BASE_URL` defaults to `https://api.typesafe.ai`; set it only for a gateway, and add
+that gateway's hostname to `allowed_decision_hosts`. The other decision points stay on the
+stub, so the example remains offline and key-free unless you opt in.
 
 On every turn Jev is asked:
 

@@ -16,6 +16,9 @@ services:
       LLM_MODEL: ${LLM_MODEL:-ollama/llama3.2}
       LITELLM_MODEL: ${LLM_MODEL:-ollama/llama3.2}
       OLLAMA_API_BASE: http://ollama:11434
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      TYPESAFE_BASE_URL: ${TYPESAFE_BASE_URL:-https://api.typesafe.ai}
+      DECISION_ROUTING_MODEL: ${DECISION_ROUTING_MODEL:-router}
       LANGSMITH_TRACING: "false"
       ORCHID_ENABLE_PERF_LOGS: "false"
     volumes:
