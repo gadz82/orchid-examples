@@ -2,7 +2,7 @@ agents:
   config_path: examples/smart_intake_router/config/agents.yaml
 
 llm:
-  model: ollama/llama3.2
+  model: ollama/gemma4:26b
 
 auth:
   dev_bypass: true

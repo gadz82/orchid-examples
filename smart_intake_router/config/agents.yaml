@@ -2,7 +2,7 @@ version: "1"
 
 defaults:
   llm:
-    model: "${LLM_MODEL:-ollama/llama3.2}"
+    model: "${LLM_MODEL:-ollama/gemma4:26b}"
     temperature: 0.2
   rag:
     enabled: false

@@ -11,7 +11,7 @@ handles all four decision points:
 | RAG | which retrieved passages survive into context (the example disables RAG, so the gate has no passages to filter) |
 
 The default profile is a deterministic **stub**, so the example runs with no key and no network.
-Synthesis still needs a chat model; the default is `ollama/llama3.2`.
+Synthesis still needs a chat model; the default is `ollama/gemma4:26b`.
 
 ## Try it
 
