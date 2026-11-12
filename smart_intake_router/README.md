@@ -157,6 +157,61 @@ what reaches synthesis, not how the variants are produced.
 OpenAI Decisions shape. The transport validates egress, bounds the call, and falls back to the
 supervisor's LLM routing on any failure.
 
+## Enable another decision point
+
+The four keys above are the legacy points. The nine newer points are enabled
+additively under `decisions.points`, without changing the legacy keys or any
+default:
+
+```yaml
+decisions:
+  points:
+    retrieval_strategy:
+      model: router                      # an existing decision_models entry
+      confidence_threshold: 0.8
+      options:
+        strategies: [simple, hyde]       # candidate allowlist
+```
+
+`retrieval_strategy` picks the RAG strategy per query before retrieval; the
+legacy `rag` gate still filters the passages afterwards. The other registered
+points are `model_routing`, `tool_choice`, `guardrails`, `memory`, `events`,
+`ingestion`, `delegation`, and `agentic_loop`.
+
+Only the points you list run. Everything else keeps its current behaviour, and a
+low-confidence, refused, timed-out, failed, or unknown answer falls back to the
+behaviour already configured (the agent's retrieval strategy, its chat model,
+the deterministic processors, no delegation, and so on).
+
+Agent-scoped points can be overridden under
+`agents.<name>.decisions.points.<point>`, or opted out with `enabled: false`
+there: `retrieval_strategy`, `model_routing`, `tool_choice`, `guardrails`,
+`ingestion`, `delegation`, and `agentic_loop`. `memory` and `events` are
+fleet-scoped, so they are configured globally only; a per-agent block for them
+is rejected.
+
+The stub does not have to answer the new question: with no answer it defaults to
+the first offered candidate option at the stub's configured `confidence` (0.9 by
+default). Add an explicit `strategy` choice to make the selection deterministic:
+
+```yaml
+decision_models:
+  router:
+    protocol: stub
+    stub:
+      answers:
+        strategy:
+          choice: simple
+          confidence: 0.95
+```
+
+`DECISION_ROUTING_MODEL=jev` changes only the example's legacy `routing` point;
+it does not change the new point's `model`. `retrieval_strategy` keeps
+`model: router` unless you point it at `jev` explicitly.
+
+See `orchid_ai/decision/AGENTS.md` for the registration, config validation,
+binding, fallback, and observability contract.
+
 ## Tests
 
 ```bash
