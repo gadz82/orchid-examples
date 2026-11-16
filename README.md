@@ -53,6 +53,7 @@ defaults to in-memory storage when no backend is configured, while
 | [tech_conference](./tech_conference/) | Four-agent conference assistant (venue, schedule, visitor, speaker) |
 | [hospital_front_office](./hospital_front_office/) | Four-agent hospital front-office assistant |
 | [orchid_experts](./orchid_experts/) | Ten RAG-powered expert agents, one per Orchid package |
+| [smart_intake_router](./smart_intake_router/) | Decision-model routing, skills, tool shortlist, and RAG gate with a deterministic stub |
 
 ### RAG & knowledge
 
