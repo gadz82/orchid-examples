@@ -26,3 +26,9 @@ cd workspace-py
 
 The runner contract test skips in a standalone examples checkout because it needs
 the sibling `script/` and `Makefile`.
+
+## Docs
+
+- Website: https://orchestratorindex.com/concepts/pipelines
+- Framework: `workspace-py/orchid/docs/pipelines.md`
+- Extensions: `workspace-py/orchid/docs/pipelines-extension.md`

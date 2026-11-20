@@ -132,3 +132,9 @@ Makefile targets.
 | `hooks/startup.py` | Local signal sink for direct runs without the events subsystem |
 | `docker-compose.yml` | API + SQLite only (no frontend, no Qdrant, no MCP) |
 | `tests/` | Direct, API, CLI and runner-contract e2e tests |
+
+## Learn more
+
+- [Data Pipelines guide](https://github.com/gadz82/orchid/blob/main/docs/pipelines.md) — YAML, shapes, job kinds, result contract, limits.
+- [Pipeline extension guide](https://github.com/gadz82/orchid/blob/main/docs/pipelines-extension.md) — custom steps, class-based shapes, registered kinds and trust boundary.
+- [Documentation site](https://orchestratorindex.com/concepts/pipelines) — the same concepts with the site navigation.

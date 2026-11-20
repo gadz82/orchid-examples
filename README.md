@@ -72,6 +72,13 @@ make demo-data_pipeline_events
 make run-data_pipeline_events
 ```
 
+Read the [Data Pipelines guide](https://github.com/gadz82/orchid/blob/main/docs/pipelines.md)
+for the YAML contract, shapes, job kinds, result format and limits, and the
+[extension guide](https://github.com/gadz82/orchid/blob/main/docs/pipelines-extension.md)
+for custom steps, class-based shapes and the operator trust boundary. The
+published documentation site has the same material at
+[orchestratorindex.com/concepts/pipelines](https://orchestratorindex.com/concepts/pipelines).
+
 ### RAG & knowledge
 
 | Example | What it shows |

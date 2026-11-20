@@ -128,3 +128,9 @@ the schedule producer, visibility and the emit sink.
 | `steps.py` | Deterministic operators copied from the direct example |
 | `hooks/startup.py` | Local signal sink for direct runs without the events dispatcher |
 | `tests/` | Trigger, signal, chat-binding and schedule e2e coverage |
+
+## Learn more
+
+- [Data Pipelines guide](https://github.com/gadz82/orchid/blob/main/docs/pipelines.md) — YAML, shapes, job kinds, result contract, limits.
+- [Pipeline extension guide](https://github.com/gadz82/orchid/blob/main/docs/pipelines-extension.md) — custom steps, class-based shapes, registered kinds and trust boundary.
+- [Documentation site](https://orchestratorindex.com/concepts/pipelines) — the same concepts with the site navigation.

@@ -24,3 +24,9 @@ Self-contained Pollen/Bloom example built on the direct `data_pipeline` DAG.
 cd workspace-py
 ../.venv/bin/python -m pytest examples/data_pipeline_events -m "not integration" --import-mode=importlib -x
 ```
+
+## Docs
+
+- Website: https://orchestratorindex.com/concepts/pipelines
+- Framework: `workspace-py/orchid/docs/pipelines.md`
+- Extensions: `workspace-py/orchid/docs/pipelines-extension.md`
