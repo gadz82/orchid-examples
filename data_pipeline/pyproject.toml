@@ -5,9 +5,9 @@ description = "Direct typed data-pipeline demo for the Orchid framework"
 requires-python = ">=3.11"
 
 dependencies = [
-    "orchid-ai[events]>=1.12.1",
-    "orchid-api>=1.9.1",
-    "orchid-storage-sqlite>=1.0.0",
+    "orchid-ai[events]>=1.13.0",
+    "orchid-api>=1.10.0",
+    "orchid-storage-sqlite>=1.2.0",
 ]
 
 [project.optional-dependencies]
