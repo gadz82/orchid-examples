@@ -1,0 +1,26 @@
+# orchid.yml — direct data-pipeline example.
+#
+# API + SQLite state; no frontend and no MCP gateway. The events layer is
+# enabled in agents.yaml for the pipeline's emit job (in-memory sink).
+
+agents:
+  config_path: examples/data_pipeline/agents.yaml
+
+llm:
+  model: ollama/llama3.2
+
+auth:
+  dev_bypass: true
+
+rag:
+  vector_backend: "null"
+
+storage:
+  class: orchid_storage_sqlite.OrchidSQLiteChatStorage
+  dsn: /data/data_pipeline.db
+
+startup:
+  hook: examples.data_pipeline.hooks.startup.attach_local_signal_sink
+
+tracing:
+  langsmith_tracing: false

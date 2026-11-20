@@ -99,6 +99,7 @@ async def build_orchid_test_app(
         mcp_gateway,
         mcp_gateway_state,
         messages,
+        pipelines,
         resume,
         runs,
         schedules,
@@ -261,6 +262,8 @@ async def build_orchid_test_app(
         app.include_router(runs.router)
         app.include_router(schedules.router)
         app.include_router(chat_events.router)
+        app.include_router(pipelines.router)
+        app.add_exception_handler(pipelines.PipelineAPIError, pipelines.pipeline_error_handler)
 
         client = TestClient(app)
         # Lifespan runs on TestClient context enter.

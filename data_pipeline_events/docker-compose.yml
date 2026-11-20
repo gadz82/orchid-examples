@@ -1,0 +1,39 @@
+# docker-compose.yml — event-driven data-pipeline example.
+#
+# One service: the Orchid API with SQLite chat + event storage and the
+# scheduler/HTTP producers. No frontend, no MCP gateway and no Qdrant.
+#
+# Usage:
+#   cp .env.example .env
+#   docker compose up --build
+#
+# API: http://localhost:8080
+
+services:
+  agents-api:
+    build:
+      context: ../..
+      dockerfile: examples/data_pipeline_events/Dockerfile
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file: .env
+    environment:
+      ORCHID_CONFIG: examples/data_pipeline_events/orchid.yml
+      VECTOR_BACKEND: "null"
+      CHAT_STORAGE_CLASS: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage
+      CHAT_DB_DSN: /data/data_pipeline_events.db
+      CHECKPOINTER_TYPE: sqlite
+      CHECKPOINTER_DSN: /data/checkpoints.db
+      PIPELINE_INGEST_TOKEN: ${PIPELINE_INGEST_TOKEN:-dev-ingest-token}
+      OLLAMA_API_BASE: ${OLLAMA_API_BASE:-http://host.docker.internal:11434}
+      LLM_MODEL: ${LLM_MODEL:-ollama/llama3.2}
+      LITELLM_MODEL: ${LITELLM_MODEL:-ollama/llama3.2}
+      LANGSMITH_TRACING: "false"
+      ORCHID_ENABLE_PERF_LOGS: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - data_pipeline_events_data:/data
+
+volumes:
+  data_pipeline_events_data:

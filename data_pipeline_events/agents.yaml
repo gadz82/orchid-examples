@@ -1,0 +1,334 @@
+# agents.yaml — event-driven customer-health data pipeline example.
+#
+# The same customer-health DAG as the direct example, but here Pollen signals
+# start it: a bearer-authenticated webhook request starts a per-user Bloom run,
+# and a cron schedule starts a service-account run every morning. When a request
+# signal carries a chat binding, the pipeline summary is posted back to that
+# chat.
+
+version: "1"
+
+defaults:
+  llm:
+    model: ollama/llama3.2
+    temperature: 0.0
+  rag:
+    enabled: false
+
+agents:
+  advisor:
+    description: "Customer health advisor for synthetic accounts."
+    # Referencing the provider here makes the decision layer build it; the
+    # pipeline's `route` job then resolves it by name.
+    decision_model: route
+    prompt: |
+      You are a customer health advisor. Be concise and use only the supplied
+      account facts. Never invent customer data.
+
+decision_models:
+  route:
+    protocol: stub
+    stub:
+      answers:
+        decision:
+          choice: retain
+          confidence: 0.95
+
+events:
+  enabled: true
+
+  store:
+    class: orchid_storage_sqlite.event_storage.SQLiteEventStorage
+    extra_args:
+      dsn: ${ORCHID_EVENTS_DSN:-/data/data_pipeline_events.db}
+
+  queue:
+    class: orchid_storage_sqlite.event_queue.SQLiteSignalQueue
+    notify_enabled: true
+    poll_interval_ms: 200
+    lease_seconds: 60
+    max_attempts: 3
+
+  producers:
+    - class: orchid_ai.events.producers.scheduler.SchedulerProducer
+
+  processors:
+    - class: orchid_ai.events.processors.asyncio_pool.AsyncioWorkerPoolProcessor
+      concurrency: 2
+      poll_interval_ms: 200
+      lease_seconds: 60
+      drain_timeout_seconds: 1
+
+  ingestion:
+    sources:
+      - id: customer-health-webhook
+        validator:
+          class: orchid_ai.events.auth.BearerValidator
+          secret_ref: env:PIPELINE_INGEST_TOKEN
+        allowed_types:
+          - pipeline.customer_health.requested
+
+  triggers:
+    - id: customer-health-request
+      "on":
+        signal: pipeline.customer_health.requested
+      emits:
+        pipeline: customer_health
+        input_from: payload
+        identity:
+          mode: act_as_user
+          user_id_from: signal.user_id
+        respect_chat_binding: true
+        visibility: actor
+      retry:
+        max: 2
+        backoff: exponential
+      parallelism: per_user
+
+    - id: customer-health-scheduled
+      "on":
+        signal: cron
+        cron: "0 6 * * *"
+      emits:
+        pipeline: customer_health
+        input:
+          customer_id: C-SCHEDULED
+        identity:
+          mode: service_account
+          name: scheduler
+        visibility: tenant
+      retry:
+        max: 2
+        backoff: exponential
+      parallelism: per_tenant
+
+  schedules:
+    - id: customer-health-daily
+      cron: "0 6 * * *"
+      trigger_id: customer-health-scheduled
+      identity:
+        mode: service_account
+        name: scheduler
+
+pipelines:
+  enabled: true
+  defaults:
+    model: ollama/llama3.2
+
+  shapes:
+    Request:
+      fields:
+        customer_id:
+          type: string
+          required: true
+          description: "Synthetic customer identifier."
+        regions:
+          type: array
+          items:
+            type: object
+            properties:
+              region:
+                type: string
+                required: true
+          default:
+            - region: north
+            - region: south
+          description: "Regions to aggregate."
+    Account:
+      fields:
+        id:
+          type: string
+          required: true
+        name:
+          type: string
+        tier:
+          type: string
+    Usage:
+      fields:
+        region:
+          type: string
+          required: true
+        units:
+          type: integer
+    Assessment:
+      fields:
+        risk:
+          type: string
+          required: true
+        score:
+          type: integer
+          min: 0
+          max: 100
+    Action:
+      fields:
+        recommendation:
+          type: string
+          required: true
+        risk:
+          type: string
+    Snapshot:
+      fields:
+        customer_id:
+          type: string
+          required: true
+        summary:
+          type: string
+    Report:
+      fields:
+        headline:
+          type: string
+          required: true
+        body:
+          type: string
+        risk:
+          type: string
+
+  relations:
+    has_usage:
+      from: [Account]
+      to: [Usage]
+
+  definitions:
+    account_snapshot:
+      description: "Small child pipeline used by the sub-pipeline job."
+      input:
+        fields:
+          customer_id:
+            type: string
+            required: true
+      jobs:
+        capture:
+          kind: deterministic
+          uses: examples.data_pipeline_events.steps.snapshot
+      output:
+        shape: Snapshot
+        from: "jobs.capture.output"
+
+    customer_health:
+      description: "Assess a synthetic customer and propose an action."
+      input:
+        shape: Request
+      interpretation:
+        mode: template
+        template: "{{ output.headline }}"
+      expose:
+        as_tool: true
+        tool_name: pipeline_customer_health
+        description: "Assess a customer and propose a retention action."
+        max_tool_result_chars: 4000
+        # Bloom/chat runs post the typed report headline to a bound chat.
+        interpretation: template
+      jobs:
+        load_account:
+          kind: deterministic
+          uses: examples.data_pipeline_events.steps.load_account
+          writes:
+            - id: "account:{{ input.customer_id }}"
+              shape: Account
+              as: account
+
+        usage_item:
+          kind: deterministic
+          uses: examples.data_pipeline_events.steps.usage_item
+          writes:
+            - id: "usage:{{ input.customer_id }}:{{ region.region }}"
+              shape: Usage
+          links:
+            - type: has_usage
+              from: "account:{{ input.customer_id }}"
+              to: "usage:{{ input.customer_id }}:{{ region.region }}"
+
+        usage_map:
+          kind: map
+          over: "input.regions"
+          as: region
+          job: usage_item
+          concurrency: 2
+          depends_on: [load_account]
+
+        assess:
+          kind: llm
+          prompt: |
+            Assess customer {{ input.customer_id }}.
+            Account: {{ jobs.load_account.output }}
+            Usage: {{ jobs.usage_map.output.items }}
+            Return a risk label and a score from 0 to 100.
+          output:
+            shape: Assessment
+          writes:
+            - id: "assessment:{{ input.customer_id }}"
+              shape: Assessment
+              as: assessment
+          depends_on: [usage_map]
+
+        route:
+          kind: decision
+          decision_model: route
+          question: "Which retention route should customer {{ input.customer_id }} take?"
+          labels: [retain, review, escalate]
+          fallback: retain
+          on_low_confidence: fallback
+          depends_on: [assess]
+
+        propose:
+          kind: deterministic
+          uses: examples.data_pipeline_events.steps.propose
+          writes:
+            - id: "action:{{ input.customer_id }}"
+              shape: Action
+              as: action
+          depends_on: [route]
+
+        escalate:
+          kind: agent
+          agent: advisor
+          prompt: |
+            Write a one-paragraph escalation note for {{ input.customer_id }}
+            using this recommendation: {{ jobs.propose.output.recommendation }}.
+          depends_on: [propose]
+
+        snapshot:
+          kind: subpipeline
+          pipeline: account_snapshot
+          input:
+            customer_id: "{{ input.customer_id }}"
+          output_from: output
+          depends_on: [load_account]
+
+        report:
+          kind: llm
+          # snapshot is a parallel branch that completes before this chain
+          # reaches report; the prompt reads its output without a second
+          # predecessor (v1 scheduling treats multiple predecessors as triggers).
+          prompt: |
+            Write a short customer-health report for {{ input.customer_id }}.
+            Snapshot: {{ jobs.snapshot.output.summary }}
+            Assessment: {{ jobs.assess.output }}
+            Recommendation: {{ jobs.propose.output.recommendation }}
+            Escalation note: {{ jobs.escalate.output }}
+          output:
+            shape: Report
+          writes:
+            - id: "report:{{ input.customer_id }}"
+              shape: Report
+              as: report
+          depends_on: [escalate]
+
+        notify:
+          kind: emit
+          signal: pipeline.customer_health.completed
+          payload:
+            customer_id: "{{ input.customer_id }}"
+            risk: "{{ jobs.assess.output.risk }}"
+            recommendation: "{{ jobs.propose.output.recommendation }}"
+            headline: "{{ jobs.report.output.headline }}"
+          dedupe_key: "customer-health:{{ input.customer_id }}"
+          identity:
+            mode: service_account
+            name: data-pipeline
+          on_error: skip
+          depends_on: [report]
+
+      output:
+        shape: Report
+        from: "jobs.report.output"

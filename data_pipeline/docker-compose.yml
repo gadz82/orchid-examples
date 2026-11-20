@@ -1,0 +1,40 @@
+# docker-compose.yml — direct data-pipeline example.
+#
+# One service: the Orchid API with SQLite state. No frontend, no MCP gateway
+# and no Qdrant instance. The example's emit job uses the in-memory events
+# layer when the API boots; direct CLI runs use the local startup-hook sink.
+#
+# Usage:
+#   cp .env.example .env
+#   docker compose up --build
+#
+# API: http://localhost:8080
+
+services:
+  agents-api:
+    build:
+      context: ../..
+      dockerfile: examples/data_pipeline/Dockerfile
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file: .env
+    environment:
+      ORCHID_CONFIG: examples/data_pipeline/orchid.yml
+      VECTOR_BACKEND: "null"
+      CHAT_STORAGE_CLASS: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage
+      CHAT_DB_DSN: /data/data_pipeline.db
+      CHECKPOINTER_TYPE: sqlite
+      CHECKPOINTER_DSN: /data/checkpoints.db
+      DEV_AUTH_BYPASS: "true"
+      OLLAMA_API_BASE: ${OLLAMA_API_BASE:-http://host.docker.internal:11434}
+      LLM_MODEL: ${LLM_MODEL:-ollama/llama3.2}
+      LITELLM_MODEL: ${LITELLM_MODEL:-ollama/llama3.2}
+      LANGSMITH_TRACING: "false"
+      ORCHID_ENABLE_PERF_LOGS: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - data_pipeline_data:/data
+
+volumes:
+  data_pipeline_data:

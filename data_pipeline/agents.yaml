@@ -1,0 +1,260 @@
+# agents.yaml — direct customer-health data pipeline example.
+#
+# Deterministic code loads synthetic data, an LLM job assesses it, a decision
+# job chooses a route, a map job fans out over regions, a sub-pipeline builds a
+# snapshot, and an emit job publishes a completion signal. Events are enabled
+# only to provide the emit sink; this example is direct-first.
+
+version: "1"
+
+defaults:
+  llm:
+    model: ollama/llama3.2
+    temperature: 0.0
+  rag:
+    enabled: false
+
+agents:
+  advisor:
+    description: "Customer health advisor for synthetic accounts."
+    # Referencing the provider here makes the decision layer build it; the
+    # pipeline's `route` job then resolves it by name.
+    decision_model: route
+    prompt: |
+      You are a customer health advisor. Be concise and use only the supplied
+      account facts. Never invent customer data.
+
+decision_models:
+  route:
+    protocol: stub
+    stub:
+      answers:
+        decision:
+          choice: retain
+          confidence: 0.95
+
+events:
+  enabled: true
+  processors:
+    - class: orchid_ai.events.processors.asyncio_pool.AsyncioWorkerPoolProcessor
+      poll_interval_ms: 10000
+      drain_timeout_seconds: 1
+
+pipelines:
+  enabled: true
+  defaults:
+    model: ollama/llama3.2
+
+  shapes:
+    Request:
+      fields:
+        customer_id:
+          type: string
+          required: true
+          description: "Synthetic customer identifier."
+        regions:
+          type: array
+          items:
+            type: object
+            properties:
+              region:
+                type: string
+                required: true
+          default:
+            - region: north
+            - region: south
+          description: "Regions to aggregate."
+    Account:
+      fields:
+        id:
+          type: string
+          required: true
+        name:
+          type: string
+        tier:
+          type: string
+    Usage:
+      fields:
+        region:
+          type: string
+          required: true
+        units:
+          type: integer
+    Assessment:
+      fields:
+        risk:
+          type: string
+          required: true
+        score:
+          type: integer
+          min: 0
+          max: 100
+    Action:
+      fields:
+        recommendation:
+          type: string
+          required: true
+        risk:
+          type: string
+    Snapshot:
+      fields:
+        customer_id:
+          type: string
+          required: true
+        summary:
+          type: string
+    Report:
+      fields:
+        headline:
+          type: string
+          required: true
+        body:
+          type: string
+        risk:
+          type: string
+
+  relations:
+    has_usage:
+      from: [Account]
+      to: [Usage]
+
+  definitions:
+    account_snapshot:
+      description: "Small child pipeline used by the sub-pipeline job."
+      input:
+        fields:
+          customer_id:
+            type: string
+            required: true
+      jobs:
+        capture:
+          kind: deterministic
+          uses: examples.data_pipeline.steps.snapshot
+      output:
+        shape: Snapshot
+        from: "jobs.capture.output"
+
+    customer_health:
+      description: "Assess a synthetic customer and propose an action."
+      input:
+        shape: Request
+      interpretation:
+        mode: template
+        template: "{{ output.headline }}"
+      expose:
+        as_tool: true
+        tool_name: pipeline_customer_health
+        description: "Assess a customer and propose a retention action."
+        max_tool_result_chars: 4000
+        interpretation: caller
+      jobs:
+        load_account:
+          kind: deterministic
+          uses: examples.data_pipeline.steps.load_account
+          writes:
+            - id: "account:{{ input.customer_id }}"
+              shape: Account
+              as: account
+
+        usage_item:
+          kind: deterministic
+          uses: examples.data_pipeline.steps.usage_item
+          writes:
+            - id: "usage:{{ input.customer_id }}:{{ region.region }}"
+              shape: Usage
+          links:
+            - type: has_usage
+              from: "account:{{ input.customer_id }}"
+              to: "usage:{{ input.customer_id }}:{{ region.region }}"
+
+        usage_map:
+          kind: map
+          over: "input.regions"
+          as: region
+          job: usage_item
+          concurrency: 2
+          depends_on: [load_account]
+
+        assess:
+          kind: llm
+          prompt: |
+            Assess customer {{ input.customer_id }}.
+            Account: {{ jobs.load_account.output }}
+            Usage: {{ jobs.usage_map.output.items }}
+            Return a risk label and a score from 0 to 100.
+          output:
+            shape: Assessment
+          writes:
+            - id: "assessment:{{ input.customer_id }}"
+              shape: Assessment
+              as: assessment
+          depends_on: [usage_map]
+
+        route:
+          kind: decision
+          decision_model: route
+          question: "Which retention route should customer {{ input.customer_id }} take?"
+          labels: [retain, review, escalate]
+          fallback: retain
+          on_low_confidence: fallback
+          depends_on: [assess]
+
+        propose:
+          kind: deterministic
+          uses: examples.data_pipeline.steps.propose
+          writes:
+            - id: "action:{{ input.customer_id }}"
+              shape: Action
+              as: action
+          depends_on: [route]
+
+        escalate:
+          kind: agent
+          agent: advisor
+          prompt: |
+            Write a one-paragraph escalation note for {{ input.customer_id }}
+            using this recommendation: {{ jobs.propose.output.recommendation }}.
+          depends_on: [propose]
+
+        snapshot:
+          kind: subpipeline
+          pipeline: account_snapshot
+          input:
+            customer_id: "{{ input.customer_id }}"
+          output_from: output
+          depends_on: [load_account]
+
+        report:
+          kind: llm
+          prompt: |
+            Write a short customer-health report for {{ input.customer_id }}.
+            Snapshot: {{ jobs.snapshot.output.summary }}
+            Assessment: {{ jobs.assess.output }}
+            Recommendation: {{ jobs.propose.output.recommendation }}
+            Escalation note: {{ jobs.escalate.output }}
+          output:
+            shape: Report
+          writes:
+            - id: "report:{{ input.customer_id }}"
+              shape: Report
+              as: report
+          depends_on: [escalate]
+
+        notify:
+          kind: emit
+          signal: pipeline.customer_health.completed
+          payload:
+            customer_id: "{{ input.customer_id }}"
+            risk: "{{ jobs.assess.output.risk }}"
+            recommendation: "{{ jobs.propose.output.recommendation }}"
+            headline: "{{ jobs.report.output.headline }}"
+          dedupe_key: "customer-health:{{ input.customer_id }}"
+          identity:
+            mode: service_account
+            name: data-pipeline
+          on_error: skip
+          depends_on: [report]
+
+      output:
+        shape: Report
+        from: "jobs.report.output"

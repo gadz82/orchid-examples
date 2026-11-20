@@ -1,0 +1,4 @@
+# The API needs the events extra so the emit job can start the pollen layer.
+orchid-ai[events]>=1.12.1
+orchid-api>=1.9.1
+orchid-storage-sqlite>=1.0.0

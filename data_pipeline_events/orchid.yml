@@ -1,0 +1,30 @@
+# orchid.yml — event-driven data-pipeline example.
+#
+# API + SQLite chat and event storage. The scheduler producer and the HTTP
+# ingestion producer are wired by orchid-api when events.enabled is true. No
+# frontend, no MCP gateway and no Qdrant.
+
+agents:
+  config_path: examples/data_pipeline_events/agents.yaml
+
+llm:
+  model: ollama/llama3.2
+
+auth:
+  # The events processor mints an identity for act_as_user triggers. This
+  # local resolver is deliberately permissive; replace it with your IdP
+  # resolver in a real deployment.
+  identity_resolver_class: examples.data_pipeline_events.identity.PipelineIdentityResolver
+
+rag:
+  vector_backend: "null"
+
+storage:
+  class: orchid_storage_sqlite.chat_storage.OrchidSQLiteChatStorage
+  dsn: /data/data_pipeline_events.db
+
+startup:
+  hook: examples.data_pipeline_events.hooks.startup.attach_local_signal_sink
+
+tracing:
+  langsmith_tracing: false

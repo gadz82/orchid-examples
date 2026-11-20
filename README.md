@@ -6,7 +6,7 @@ A collection of self-contained examples showcasing every major Orchid feature. E
 
 ## Quick start (Docker)
 
-Five examples ship a full Docker stack and can be run independently:
+Several examples ship a full Docker stack and can be run independently:
 
 ```bash
 cd examples/<name>
@@ -54,6 +54,23 @@ defaults to in-memory storage when no backend is configured, while
 | [hospital_front_office](./hospital_front_office/) | Four-agent hospital front-office assistant |
 | [orchid_experts](./orchid_experts/) | Ten RAG-powered expert agents, one per Orchid package |
 | [smart_intake_router](./smart_intake_router/) | Decision-model routing, skills, tool shortlist, and RAG gate with a deterministic stub |
+
+### Data pipelines
+
+| Example | What it shows | Storage | Services |
+|---------|---------------|---------|---------|
+| [data_pipeline](./data_pipeline/) | Direct typed DAG: deterministic, LLM, agent, decision, map, sub-pipeline and emit jobs; synthetic customer-health report | SQLite (events in-memory) | API (8080) |
+| [data_pipeline_events](./data_pipeline_events/) | Event-driven typed DAG: Pollen signal ingestion, a Bloom pipeline trigger and the same customer-health jobs | SQLite | API (8080) |
+
+```bash
+# Direct pipeline (API + SQLite)
+make demo-data_pipeline        # via script/start_data_pipeline.sh
+make run-data_pipeline         # docker compose up directly
+
+# Event-driven pipeline
+make demo-data_pipeline_events
+make run-data_pipeline_events
+```
 
 ### RAG & knowledge
 
